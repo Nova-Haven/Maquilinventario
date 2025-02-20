@@ -15,15 +15,19 @@
       <thead></thead>
       <tbody></tbody>
     </table>
+    <table id="excelTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
 
     <script>
       async function loadExcel() {
         // Ruta al archivo Excel en el servidor o proyecto local
-        const response = await fetch('data/InventarioFormex.xlsx'); // Asegúrate de que esta ruta sea correcta
+        const response = await fetch("../data/InventarioFormex.xlsx"); // Asegúrate de que esta ruta sea correcta
         const arrayBuffer = await response.arrayBuffer(); // Convertir a ArrayBuffer
 
         const data = new Uint8Array(arrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: "array" });
 
         // Tomar la primera hoja del archivo
         const sheetName = workbook.SheetNames[0];
@@ -38,13 +42,13 @@
 
       // Mostrar los datos en la tabla HTML
       function displayTable(data) {
-        const tableHead = document.querySelector('#excelTable thead');
-        const tableBody = document.querySelector('#excelTable tbody');
+        const tableHead = document.querySelector("#excelTable thead");
+        const tableBody = document.querySelector("#excelTable tbody");
 
         // Crear el encabezado de la tabla
-        const headerRow = document.createElement('tr');
+        const headerRow = document.createElement("tr");
         data[0].forEach((cell) => {
-          const th = document.createElement('th');
+          const th = document.createElement("th");
           th.textContent = cell;
           headerRow.appendChild(th);
         });
@@ -52,9 +56,9 @@
 
         // Crear las filas de la tabla
         data.slice(1).forEach((row) => {
-          const tr = document.createElement('tr');
+          const tr = document.createElement("tr");
           row.forEach((cell) => {
-            const td = document.createElement('td');
+            const td = document.createElement("td");
             td.textContent = cell;
             tr.appendChild(td);
           });
