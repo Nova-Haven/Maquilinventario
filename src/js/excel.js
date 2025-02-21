@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import $ from "jquery";
 import DataTable from "datatables.net-dt";
 import languageES from "datatables.net-plugins/i18n/es-ES.mjs";
@@ -6,7 +5,11 @@ import languageES from "datatables.net-plugins/i18n/es-ES.mjs";
 // Make DataTable available on jQuery
 $.DataTable = DataTable;
 
+let XLSX;
+
 async function loadExcel() {
+  const xlsxModule = await import("xlsx");
+  XLSX = xlsxModule.default;
   const tableContainer = document.getElementById("excelTable");
   const loadingMessage = document.createElement("div");
   loadingMessage.textContent = "Cargando datos...";

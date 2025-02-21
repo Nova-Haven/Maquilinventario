@@ -18,6 +18,36 @@ export const db = getFirestore(app);
 
 // Enable emulators if on localhost
 if (window.location.hostname === "localhost") {
-  connectAuthEmulator(auth, "http://localhost:9099");
-  connectFirestoreEmulator(db, "localhost", 8088);
+  // Function to check if emulator is running
+  const checkEmulator = async (port) => {
+    try {
+      const response = await fetch(`http://localhost:${port}`);
+      return response.status !== 404;
+    } catch {
+      return false;
+    }
+  };
+
+  // Check and connect emulators
+  Promise.all([checkEmulator(9099), checkEmulator(8088)]).then(
+    ([authRunning, firestoreRunning]) => {
+      if (!authRunning) {
+        console.warn(
+          "⚠️ Auth emulator not running. Start with: firebase emulators:start"
+        );
+      } else {
+        connectAuthEmulator(auth, "http://localhost:9099");
+        console.log("✅ Connected to Auth emulator");
+      }
+
+      if (!firestoreRunning) {
+        console.warn(
+          "⚠️ Firestore emulator not running. Start with: firebase emulators:start"
+        );
+      } else {
+        connectFirestoreEmulator(db, "localhost", 8088);
+        console.log("✅ Connected to Firestore emulator");
+      }
+    }
+  );
 }
