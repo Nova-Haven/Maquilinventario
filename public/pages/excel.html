@@ -1,73 +1,8 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Excel</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  </head>
-  <body>
-    <h1>Excel</h1>
-    <p>
-      Welcome to the Excel page, here you'll deal with uploading a new excel.
-    </p>
-
-    <h2>Datos de Excel</h2>
-    <table id="excelTable" border="1">
-      <thead></thead>
-      <tbody></tbody>
-    </table>
-    <table id="excelTable">
-      <thead></thead>
-      <tbody></tbody>
-    </table>
-
-    <script>
-      async function loadExcel() {
-        // Ruta al archivo Excel en el servidor o proyecto local
-        const response = await fetch("../data/InventarioFormex.xlsx"); // Asegúrate de que esta ruta sea correcta
-        const arrayBuffer = await response.arrayBuffer(); // Convertir a ArrayBuffer
-
-        const data = new Uint8Array(arrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-
-        // Tomar la primera hoja del archivo
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-
-        // Convertir la hoja en JSON
-        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-        // Mostrar los datos en la tabla
-        displayTable(jsonData);
-      }
-
-      // Mostrar los datos en la tabla HTML
-      function displayTable(data) {
-        const tableHead = document.querySelector("#excelTable thead");
-        const tableBody = document.querySelector("#excelTable tbody");
-
-        // Crear el encabezado de la tabla
-        const headerRow = document.createElement("tr");
-        data[0].forEach((cell) => {
-          const th = document.createElement("th");
-          th.textContent = cell;
-          headerRow.appendChild(th);
-        });
-        tableHead.appendChild(headerRow);
-
-        // Crear las filas de la tabla
-        data.slice(1).forEach((row) => {
-          const tr = document.createElement("tr");
-          row.forEach((cell) => {
-            const td = document.createElement("td");
-            td.textContent = cell;
-            tr.appendChild(td);
-          });
-          tableBody.appendChild(tr);
-        });
-      }
-
-      // Llamar a la función cuando cargue la página
-      window.onload = loadExcel;
-    </script>
-  </body>
-</html>
+<div class="excel-container">
+  <h1>Inventario de Maquiladora Formex</h1>
+  <h3 id="period">Periodo: XXX/XXX/XXXX - XXX/XXX/XXXX</h3>
+  <table id="excelTable">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+</div>
