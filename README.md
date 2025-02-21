@@ -10,7 +10,7 @@ super duper garbanzo
 4. Run `firebase emulators:start`
 5. Go to http://localhost:4000/auth and add a new entry
 6. Run `npx vite dev`
-7. Start developing
+7. Start developing and see your changes on http://localhost:5173
 
 ### Ready to export?
 
