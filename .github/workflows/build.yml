@@ -1,5 +1,10 @@
 name: Build Project on push to main
 
+permissions:
+  contents: write
+  deployments: write
+  id-token: write
+
 on:
   push:
     branches: [main]
@@ -29,7 +34,7 @@ jobs:
           minor_pattern: "/feat:/"
           minor_regexp_flags: "i"
           version_format: "${major}.${minor}.${patch}"
-          enable_prerelease_mode: true
+          enable_prerelease_mode: false
           search_commit_body: true
 
       - name: Install dependencies
