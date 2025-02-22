@@ -21,13 +21,16 @@ jobs:
 
       - name: Calculate version
         id: version
-        uses: paulhatch/semantic-version@v5.3.0
+        uses: paulhatch/semantic-version@v5.4.0
         with:
           tag_prefix: "v"
-          major_pattern: "(RELEASE:|release:|Release:|BREAKING CHANGE:|breaking change:|Breaking change:|MAJOR CHANGE:|major change:|Major change:|MAJOR:|major:|Major:)"
-          minor_pattern: "(feat:|Feat:|FEAT:|Feature:|FEATURE:)"
-          patch_pattern: "(fix:|Fix:|FIX:)"
+          major_pattern: "/(RELEASE:|BREAKING CHANGE:)/"
+          major_regexp_flags: "i"
+          minor_pattern: "/feat:/"
+          minor_regexp_flags: "i"
           version_format: "${major}.${minor}.${patch}"
+          enable_prerelease_mode: true
+          search_commit_body: true
 
       - name: Install dependencies
         run: bun install
