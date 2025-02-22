@@ -1,4 +1,4 @@
-name: Build Project
+name: Build Project on push to main
 
 on:
   push:
@@ -57,6 +57,14 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TESTING_MAQUILA }}
+          channelId: live
+          projectId: testing-maquila
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
