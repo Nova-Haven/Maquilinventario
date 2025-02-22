@@ -1,6 +1,5 @@
 import { auth } from "./js/fb.min";
 import {} from "xlsx";
-import { loadExcel } from "./js/excel.min";
 import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import "./style.min.css";
 
@@ -14,19 +13,20 @@ document.addEventListener("DOMContentLoaded", function () {
     loginForm.id = "loginForm";
     loginForm.className = "container";
     loginForm.innerHTML = `
-      <h2>Login</h2>
-      <form id="login">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" required />
-        </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" required />
-        </div>
-        <button type="submit" class="btn">Login</button>
-      </form>
-    `;
+        <h2>Login</h2>
+        <div id="loginError" class="error-message"></div>
+        <form id="login">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" required />
+          </div>
+          <button type="submit" class="btn">Login</button>
+        </form>
+      `;
 
     document.body.appendChild(loginForm);
 
@@ -35,9 +35,31 @@ document.addEventListener("DOMContentLoaded", function () {
       e.preventDefault();
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
+      const errorDiv = document.getElementById("loginError");
+
+      // Clear previous error
+      errorDiv.textContent = "";
 
       signInWithEmailAndPassword(auth, email, password).catch((error) => {
-        alert("Error: " + error.message);
+        let errorMessage = "Error al iniciar sesión";
+
+        // Customize error messages
+        switch (error.code) {
+          case "auth/invalid-credential":
+            errorMessage = "Email o contraseña incorrectos";
+            break;
+          case "auth/user-disabled":
+            errorMessage = "Esta cuenta ha sido deshabilitada";
+            break;
+          case "auth/user-not-found":
+            errorMessage = "No existe una cuenta con este email";
+            break;
+          case "auth/too-many-requests":
+            errorMessage = "Demasiados intentos. Por favor, intente más tarde";
+            break;
+        }
+
+        errorDiv.textContent = errorMessage;
       });
     });
 
@@ -50,6 +72,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let loginFormEl;
 
     if (user) {
+      const { loadExcel } = await import("./js/excel.min.js");
       // Remove login form if it exists
       loginFormEl = document.getElementById("loginForm");
       if (loginFormEl) loginFormEl.remove();
