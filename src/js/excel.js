@@ -25,6 +25,7 @@ async function loadExcel() {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
     const extractedData = {
+      name: extractName(sheet),
       period: extractPeriod(sheet),
       data: extractMainData(sheet),
       totals: extractTotals(sheet),
@@ -47,6 +48,12 @@ function extractPeriod(sheet) {
     start: matches?.[1] || "",
     end: matches?.[2] || "",
   };
+}
+
+function extractName(sheet) {
+  const periodCell = sheet["C1"] || {};
+  const periodText = periodCell.v || "";
+  return periodText;
 }
 
 function extractMainData(sheet) {
@@ -126,11 +133,77 @@ function extractTotals(sheet) {
   };
 }
 
+function toTitleCase(str) {
+  // Special cases for Mexican company suffixes
+  const specialCases = {
+    "sa de cv": "SA de CV",
+    "sapi de cv": "SAPI de CV",
+    "srl de cv": "SRL de CV",
+    "s de rl": "S de RL",
+    "s de rl de cv": "S de RL de CV",
+    "sc de rl": "SC de RL",
+  };
+
+  // Words to keep lowercase (prepositions and articles)
+  const lowercaseWords = [
+    "de",
+    "del",
+    "la",
+    "las",
+    "el",
+    "los",
+    "y",
+    "e",
+    "o",
+    "u",
+  ];
+
+  // First convert the string to lowercase
+  const lowerStr = str.toLowerCase();
+
+  // Check for company suffix at the end of the string
+  for (const [suffix, replacement] of Object.entries(specialCases)) {
+    if (lowerStr.endsWith(` ${suffix}`)) {
+      // Split the string to separate the company name and suffix
+      const mainPart = str.slice(0, -suffix.length).trim();
+      // Title case the main part while keeping certain words lowercase
+      const titleCased = mainPart
+        .toLowerCase()
+        .split(" ")
+        .map((word, index) => {
+          // Always capitalize first word
+          if (index === 0) return word.charAt(0).toUpperCase() + word.slice(1);
+          // Keep certain words lowercase
+          if (lowercaseWords.includes(word)) return word;
+          // Capitalize other words
+          return word.charAt(0).toUpperCase() + word.slice(1);
+        })
+        .join(" ");
+
+      return `${titleCased} ${replacement}`;
+    }
+  }
+
+  // If no special suffix found, apply the same title case rules
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word, index) => {
+      if (index === 0) return word.charAt(0).toUpperCase() + word.slice(1);
+      if (lowercaseWords.includes(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
 function displayTable(data) {
   const tableHead = document.querySelector("#excelTable thead");
   const tableBody = document.querySelector("#excelTable tbody");
   const periodText = `${data.period.start} al ${data.period.end}`;
+  const title = toTitleCase(data.name);
   document.querySelector("#period").textContent = periodText;
+  document.querySelector("#title").textContent = data.name;
+  document.title = title;
 
   // Clear existing content
   tableHead.innerHTML = "";
