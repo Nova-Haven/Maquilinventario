@@ -14,15 +14,39 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Enable emulators if on localhost
-if (window.location.hostname === "localhost") {
+// Enable emulators if on localhost and running on vite dev server
+if (
+  window.location.hostname === "localhost" &&
+  window.location.port == "5173"
+) {
   const AUTH_PORT = 9099;
+
+  const showEmulatorError = () => {
+    const errorDiv = document.createElement("div");
+    errorDiv.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #dc3545;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-family: system-ui;
+      z-index: 9999;
+    `;
+    errorDiv.innerHTML = `
+      ⚠️ Firebase Auth emulator not running<br>
+      Run <code>firebase emulators:start</code> in your terminal
+    `;
+    document.body.prepend(errorDiv);
+  };
 
   const checkEmulator = async (port) => {
     try {
       const response = await fetch(`http://localhost:${port}`, {
         method: "GET",
-        timeout: 2000, // 2 second timeout
+        timeout: 2000,
       });
       return response.ok;
     } catch {
@@ -40,15 +64,17 @@ if (window.location.hostname === "localhost") {
           Run this command in your terminal:
           $ firebase emulators:start
           
-          Make sure you have Firebase CLI installed:
-          $ npm install -g firebase-tools
+          Make sure you have the required dependencies installed:
+          $ npm install
         `);
+        showEmulatorError();
         return false;
       }
 
       connectAuthEmulator(auth, `http://localhost:${AUTH_PORT}`, {
         disableWarnings: true,
       });
+
       console.log("✅ Connected to Firebase Auth emulator");
       return true;
     } catch (error) {

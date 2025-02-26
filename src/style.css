@@ -160,7 +160,7 @@ h1 {
 /* Add shadow effects */
 .dataTables_wrapper thead::after,
 .dataTables_wrapper tfoot::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   right: 0;

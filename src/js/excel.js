@@ -1,6 +1,6 @@
-import $ from 'jquery';
-import DataTable from 'datatables.net-dt';
-import languageES from 'datatables.net-plugins/i18n/es-ES.mjs';
+import $ from "jquery";
+import DataTable from "datatables.net-dt";
+import languageES from "datatables.net-plugins/i18n/es-ES.mjs";
 
 // Make DataTable available on jQuery
 $.DataTable = DataTable;
@@ -8,20 +8,20 @@ $.DataTable = DataTable;
 let XLSX;
 
 async function loadExcel() {
-  const xlsxModule = await import('xlsx');
+  const xlsxModule = await import("xlsx");
   XLSX = xlsxModule.default;
-  const tableContainer = document.getElementById('excelTable');
-  const loadingMessage = document.createElement('div');
-  loadingMessage.textContent = 'Cargando datos';
+  const tableContainer = document.getElementById("excelTable");
+  const loadingMessage = document.createElement("div");
+  loadingMessage.textContent = "Cargando datos";
   tableContainer.parentNode.insertBefore(loadingMessage, tableContainer);
 
   try {
-    const response = await fetch('/data/' + import.meta.env.VITE_EXCEL_FILE);
-    if (!response.ok) throw new Error('No se pudo cargar el archivo Excel');
+    const response = await fetch("/data/" + import.meta.env.VITE_EXCEL_FILE);
+    if (!response.ok) throw new Error("No se pudo cargar el archivo Excel");
 
     const arrayBuffer = await response.arrayBuffer();
     const data = new Uint8Array(arrayBuffer);
-    const workbook = XLSX.read(data, { type: 'array' });
+    const workbook = XLSX.read(data, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
     const extractedData = {
@@ -33,26 +33,26 @@ async function loadExcel() {
 
     displayTable(extractedData);
   } catch (error) {
-    console.error('Error:', error);
-    loadingMessage.textContent = 'Error al cargar los datos';
+    console.error("Error:", error);
+    loadingMessage.textContent = "Error al cargar los datos";
   } finally {
     loadingMessage.remove();
   }
 }
 
 function extractPeriod(sheet) {
-  const periodCell = sheet['A4'] || {};
-  const periodText = periodCell.v || '';
+  const periodCell = sheet["A4"] || {};
+  const periodText = periodCell.v || "";
   const matches = periodText.match(/Del: (.*?) Al: (.*?)$/);
   return {
-    start: matches?.[1] || '',
-    end: matches?.[2] || '',
+    start: matches?.[1] || "",
+    end: matches?.[2] || "",
   };
 }
 
 function extractName(sheet) {
-  const periodCell = sheet['C1'] || {};
-  const periodText = periodCell.v || '';
+  const periodCell = sheet["C1"] || {};
+  const periodText = periodCell.v || "";
   return periodText;
 }
 
@@ -61,7 +61,7 @@ function extractMainData(sheet) {
 
   // Find where the main data ends (where notes begin)
   const notesStartIndex = data.findIndex(
-    (row, index) => index > 8 && row[1] && row[1].toString().startsWith('(1)')
+    (row, index) => index > 8 && row[1] && row[1].toString().startsWith("(1)")
   );
 
   // Extract only the main data rows
@@ -70,7 +70,7 @@ function extractMainData(sheet) {
     .map((row) => ({
       producto: row[1],
       nombre: row[2],
-      metodo_costeo: row[3]?.replace(/^Costo\s+/i, '') || '',
+      metodo_costeo: row[3]?.replace(/^Costo\s+/i, "") || "",
       unidades: {
         inventario_inicial: row[5],
         entradas: row[6],
@@ -100,8 +100,8 @@ function extractMainData(sheet) {
 }
 
 function formatNumber(num) {
-  if (num === undefined || num === null) return '0';
-  return num.toLocaleString('es-MX', {
+  if (num === undefined || num === null) return "0";
+  return num.toLocaleString("es-MX", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -111,7 +111,7 @@ function extractTotals(sheet) {
   // Find the totals row (it's right after the last data row)
   const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
   const lastDataIndex = data.findIndex(
-    (row, index) => index > 8 && (!row[1] || row[1] === '')
+    (row, index) => index > 8 && (!row[1] || row[1] === "")
   );
   const totalsRow = data[lastDataIndex];
 
@@ -136,26 +136,26 @@ function extractTotals(sheet) {
 function toTitleCase(str) {
   // Special cases for Mexican company suffixes
   const specialCases = {
-    'sa de cv': 'SA de CV',
-    'sapi de cv': 'SAPI de CV',
-    'srl de cv': 'SRL de CV',
-    's de rl': 'S de RL',
-    's de rl de cv': 'S de RL de CV',
-    'sc de rl': 'SC de RL',
+    "sa de cv": "SA de CV",
+    "sapi de cv": "SAPI de CV",
+    "srl de cv": "SRL de CV",
+    "s de rl": "S de RL",
+    "s de rl de cv": "S de RL de CV",
+    "sc de rl": "SC de RL",
   };
 
   // Words to keep lowercase (prepositions and articles)
   const lowercaseWords = [
-    'de',
-    'del',
-    'la',
-    'las',
-    'el',
-    'los',
-    'y',
-    'e',
-    'o',
-    'u',
+    "de",
+    "del",
+    "la",
+    "las",
+    "el",
+    "los",
+    "y",
+    "e",
+    "o",
+    "u",
   ];
 
   // First convert the string to lowercase
@@ -169,7 +169,7 @@ function toTitleCase(str) {
       // Title case the main part while keeping certain words lowercase
       const titleCased = mainPart
         .toLowerCase()
-        .split(' ')
+        .split(" ")
         .map((word, index) => {
           // Always capitalize first word
           if (index === 0) return word.charAt(0).toUpperCase() + word.slice(1);
@@ -178,7 +178,7 @@ function toTitleCase(str) {
           // Capitalize other words
           return word.charAt(0).toUpperCase() + word.slice(1);
         })
-        .join(' ');
+        .join(" ");
 
       return `${titleCased} ${replacement}`;
     }
@@ -187,61 +187,61 @@ function toTitleCase(str) {
   // If no special suffix found, apply the same title case rules
   return str
     .toLowerCase()
-    .split(' ')
+    .split(" ")
     .map((word, index) => {
       if (index === 0) return word.charAt(0).toUpperCase() + word.slice(1);
       if (lowercaseWords.includes(word)) return word;
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
-    .join(' ');
+    .join(" ");
 }
 
 function displayTable(data) {
-  const tableHead = document.querySelector('#excelTable thead');
-  const tableBody = document.querySelector('#excelTable tbody');
+  const tableHead = document.querySelector("#excelTable thead");
+  const tableBody = document.querySelector("#excelTable tbody");
   const periodText = `${data.period.start} al ${data.period.end}`;
   const title = toTitleCase(data.name);
-  document.querySelector('#period').textContent = periodText;
-  document.querySelector('#title').textContent = data.name;
+  document.querySelector("#period").textContent = periodText;
+  document.querySelector("#title").textContent = data.name;
   document.title = title;
 
   // Clear existing content
-  tableHead.innerHTML = '';
-  tableBody.innerHTML = '';
+  tableHead.innerHTML = "";
+  tableBody.innerHTML = "";
 
   // Create column groups header
-  const headerGroup = document.createElement('tr');
+  const headerGroup = document.createElement("tr");
   [
-    { text: '', colspan: 3 },
-    { text: 'Unidades', colspan: 4 },
-    { text: 'Importes', colspan: 4 },
-    { text: '', colspan: 1 },
+    { text: "", colspan: 3 },
+    { text: "Unidades", colspan: 4 },
+    { text: "Importes", colspan: 4 },
+    { text: "", colspan: 1 },
   ].forEach((group) => {
-    const th = document.createElement('th');
+    const th = document.createElement("th");
     th.textContent = group.text;
     th.colSpan = group.colspan;
-    th.style.textAlign = 'center';
+    th.style.textAlign = "center";
     headerGroup.appendChild(th);
   });
   tableHead.appendChild(headerGroup);
 
   // Create subheaders
-  const subHeaderRow = document.createElement('tr');
+  const subHeaderRow = document.createElement("tr");
   [
-    'Producto',
-    'Nombre',
-    'M. Costeo',
-    'Inv. Inicial',
-    'Entradas',
-    'Salidas',
-    'Existencia',
-    'Inv. Inicial',
-    'Entradas',
-    'Salidas',
-    'Inv. Final',
-    'Err.',
+    "Producto",
+    "Nombre",
+    "M. Costeo",
+    "Inv. Inicial",
+    "Entradas",
+    "Salidas",
+    "Existencia",
+    "Inv. Inicial",
+    "Entradas",
+    "Salidas",
+    "Inv. Final",
+    "Err.",
   ].forEach((text) => {
-    const th = document.createElement('th');
+    const th = document.createElement("th");
     th.textContent = text;
     subHeaderRow.appendChild(th);
   });
@@ -249,7 +249,7 @@ function displayTable(data) {
 
   // Create body rows
   data.data.mainData.forEach((row) => {
-    const tr = document.createElement('tr');
+    const tr = document.createElement("tr");
     [
       row.producto,
       row.nombre,
@@ -264,7 +264,7 @@ function displayTable(data) {
       row.importes.inventario_final,
       row.error,
     ].forEach((cell, index) => {
-      const td = document.createElement('td');
+      const td = document.createElement("td");
 
       // Special handling for error column
       if (index === 11 && cell) {
@@ -276,18 +276,18 @@ function displayTable(data) {
         );
 
         if (note) {
-          td.classList.add('has-tooltip');
+          td.classList.add("has-tooltip");
           td.title = note; // Add tooltip with full note text
         }
       } else {
         // Normal cell handling
-        td.textContent = cell !== undefined && cell !== null ? cell : '0';
+        td.textContent = cell !== undefined && cell !== null ? cell : "0";
       }
 
       // Add number-cell class for numeric columns (excluding error column)
       if (index >= 3 && index <= 10) {
         td.textContent = formatNumber(Number(cell));
-        td.classList.add('number-cell');
+        td.classList.add("number-cell");
       }
 
       tr.appendChild(td);
@@ -296,12 +296,12 @@ function displayTable(data) {
   });
 
   // Create totals row
-  const totalsRow = document.createElement('tr');
-  const tableFoot = document.createElement('tfoot');
+  const totalsRow = document.createElement("tr");
+  const tableFoot = document.createElement("tfoot");
   [
-    'Totales',
-    '',
-    '',
+    "Totales",
+    "",
+    "",
     data.totals.unidades.inventario_inicial,
     data.totals.unidades.entradas,
     data.totals.unidades.salidas,
@@ -310,15 +310,15 @@ function displayTable(data) {
     data.totals.importes.entradas,
     data.totals.importes.salidas,
     data.totals.importes.inventario_final,
-    '',
+    "",
   ].forEach((cell, index) => {
-    const td = document.createElement('td');
-    td.textContent = cell !== undefined && cell !== null ? cell : '0';
+    const td = document.createElement("td");
+    td.textContent = cell !== undefined && cell !== null ? cell : "0";
 
     // Add number-cell class for numeric columns
     if (index >= 3 && index <= 10) {
       td.textContent = formatNumber(Number(cell));
-      td.classList.add('number-cell');
+      td.classList.add("number-cell");
     }
 
     totalsRow.appendChild(td);
@@ -326,22 +326,22 @@ function displayTable(data) {
 
   // Add the totals row to the table footer
   tableFoot.appendChild(totalsRow);
-  document.querySelector('#excelTable').appendChild(tableFoot);
+  document.querySelector("#excelTable").appendChild(tableFoot);
 
   // Initialize DataTable
   const defaultPageLength = 10;
-  $('#excelTable').DataTable({
+  $("#excelTable").DataTable({
     order: [],
     responsive: true,
     pageLength: defaultPageLength,
     lengthMenu: [
       [10, 25, 50, 100, -1],
-      [10, 25, 50, 100, 'Todos'],
+      [10, 25, 50, 100, "Todos"],
     ],
     language: {
       ...languageES,
-      lengthMenu: '_MENU_ por página',
-      searchPlaceholder: 'Buscar...',
+      lengthMenu: "_MENU_ por página",
+      searchPlaceholder: "Buscar...",
     },
     dom: '<"datatable-header"<"left"l><"center"B><"right"f>>rt<"datatable-footer"<"pagination-wrapper"<"pagination-info"i><"pagination-controls"p>>>',
     scrollX: false,
@@ -351,9 +351,9 @@ function displayTable(data) {
     paging: true,
     autoWidth: false,
     columnDefs: [
-      { width: '25%', target: 1 },
-      { width: '6%', target: 2 },
-      { width: '3%', target: 11 },
+      { width: "25%", target: 1 },
+      { width: "6%", target: 2 },
+      { width: "3%", target: 11 },
     ],
   });
 }

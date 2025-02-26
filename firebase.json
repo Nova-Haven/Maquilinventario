@@ -13,9 +13,6 @@
     "auth": {
       "port": 9099
     },
-    "firestore": {
-      "port": 8088
-    },
     "hosting": {
       "port": 7077
     },
