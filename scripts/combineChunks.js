@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
 // Create necessary directories
-const outputDir = join("dist", "data");
+const outputDir = join("public", "assets");
 if (!existsSync(outputDir)) {
   mkdirSync(outputDir, { recursive: true });
 }

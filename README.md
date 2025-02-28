@@ -49,7 +49,7 @@ VITE_EXCEL_FILE=your_excel_filename.xlsx
 
 ### 2. Excel File Setup
 
-1. Place your Excel file in the `public/data` directory
+1. Place your Excel file in the `public/assets` directory
 2. Ensure it follows the required format:
 
 ```plaintext

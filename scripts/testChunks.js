@@ -45,7 +45,7 @@ try {
   );
 
   // Step 3: Write directly to output file
-  writeFileSync(`./data/${VITE_EXCEL_FILE}`, combined);
+  writeFileSync(`./public/assets/${VITE_EXCEL_FILE}`, combined);
   console.log(`✅ Wrote Excel file: ${combined.length} bytes`);
 
   // Step 4: Create a proper base64 version for GitHub Actions
