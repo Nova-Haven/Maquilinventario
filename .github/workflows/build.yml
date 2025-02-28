@@ -27,25 +27,51 @@ jobs:
       - name: Combine Excel chunks
         run: |
           mkdir -p dist/data
-          # Create a simpler and more robust combination approach
-          echo "${{ secrets.EXCEL_FILE_CHUNK_1 }}" > chunk1.b64
-          echo "${{ secrets.EXCEL_FILE_CHUNK_2 }}" > chunk2.b64
-          echo "${{ secrets.EXCEL_FILE_CHUNK_3 }}" > chunk3.b64
-          echo "${{ secrets.EXCEL_FILE_CHUNK_4 }}" > chunk4.b64
-          echo "${{ secrets.EXCEL_FILE_CHUNK_5 }}" > chunk5.b64
-          echo "${{ secrets.EXCEL_FILE_CHUNK_6 }}" > chunk6.b64
-
-          # Combine all chunks into one file
-          cat chunk*.b64 > combined.b64
-
-          # Clean up the combined file to ensure proper base64 format
-          tr -d '\r\n\t ' < combined.b64 > clean.b64
-
-          # Decode the cleaned file
-          base64 -d clean.b64 > "dist/data/${{ secrets.VITE_EXCEL_FILE }}"
-
-          # Clean up temp files
-          rm chunk*.b64 combined.b64 clean.b64
+          
+          # Use Node.js for the entire process to avoid shell escaping issues
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Create necessary directories
+            const outputDir = path.join('dist', 'data');
+            if (!fs.existsSync(outputDir)) {
+              fs.mkdirSync(outputDir, { recursive: true });
+            }
+            
+            // Get all chunks from secrets
+            const chunks = [
+              process.env.EXCEL_FILE_CHUNK_1,
+              process.env.EXCEL_FILE_CHUNK_2,
+              process.env.EXCEL_FILE_CHUNK_3,
+              process.env.EXCEL_FILE_CHUNK_4,
+              process.env.EXCEL_FILE_CHUNK_5,
+              process.env.EXCEL_FILE_CHUNK_6
+            ].filter(Boolean);
+            
+            if (chunks.length !== 6) {
+              throw new Error('Missing one or more chunks');
+            }
+            
+            // Combine and decode chunks
+            const combined = chunks.join('');
+            const decoded = Buffer.from(combined, 'base64');
+            
+            // Write output file
+            const outputFile = path.join(outputDir, process.env.VITE_EXCEL_FILE);
+            fs.writeFileSync(outputFile, decoded);
+            
+            console.log(`✅ Excel file created: ${decoded.length} bytes`);
+            console.log(`📁 Location: ${outputFile}`);
+          "
+        env:
+          EXCEL_FILE_CHUNK_1: ${{ secrets.EXCEL_FILE_CHUNK_1 }}
+          EXCEL_FILE_CHUNK_2: ${{ secrets.EXCEL_FILE_CHUNK_2 }}
+          EXCEL_FILE_CHUNK_3: ${{ secrets.EXCEL_FILE_CHUNK_3 }}
+          EXCEL_FILE_CHUNK_4: ${{ secrets.EXCEL_FILE_CHUNK_4 }}
+          EXCEL_FILE_CHUNK_5: ${{ secrets.EXCEL_FILE_CHUNK_5 }}
+          EXCEL_FILE_CHUNK_6: ${{ secrets.EXCEL_FILE_CHUNK_6 }}
+          VITE_EXCEL_FILE: ${{ secrets.VITE_EXCEL_FILE }}
 
       - name: Calculate version
         id: version

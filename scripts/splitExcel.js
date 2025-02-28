@@ -1,8 +1,5 @@
-import { readFileSync, writeFileSync } from "fs";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { readFileSync, writeFileSync, statSync, mkdirSync, rmSync } from "fs";
 import { config } from "dotenv";
-import { platform } from "os";
 import { Octokit } from "@octokit/rest";
 import sodium from "libsodium-wrappers";
 
@@ -16,71 +13,90 @@ const octokit = new Octokit({
   auth: GITHUB_TOKEN,
 });
 
-const execAsync = promisify(exec);
-const isWindows = platform() === "win32";
-
 // Configuration
 const NUM_CHUNKS = 6;
 const FILE_PATH = `./data/${VITE_EXCEL_FILE}`;
 const TEMP_DIR = "./.temp";
 
-// Platform-specific commands
-const commands = {
-  mkdir: isWindows ? "mkdir" : "mkdir -p",
-  rmrf: isWindows ? "rmdir /s /q" : "rm -rf",
-  base64: (path) =>
-    isWindows
-      ? `certutil -encode "${path}" temp.b64 && type temp.b64 | findstr /v /c:- && del temp.b64`
-      : `base64 -i "${path}"`,
-};
-
 async function splitAndEncodeFile() {
   try {
+    // Get original file size for validation
+    const originalSize = statSync(FILE_PATH).size;
+    if (originalSize === 0) {
+      throw new Error("❌ Error: Excel file is empty");
+    }
+    console.log(`📊 Original file size: ${originalSize} bytes`);
+
     const fileBuffer = readFileSync(FILE_PATH);
     const chunkSize = Math.ceil(fileBuffer.length / NUM_CHUNKS);
 
     // Split into exactly 6 chunks
     const chunks = [];
+    let totalSize = 0;
     for (let i = 0; i < NUM_CHUNKS; i++) {
       const start = i * chunkSize;
       const end = Math.min(start + chunkSize, fileBuffer.length);
-      chunks.push(new Uint8Array(fileBuffer).subarray(start, end));
+      const chunk = new Uint8Array(fileBuffer).subarray(start, end);
+      chunks.push(chunk);
+      totalSize += chunk.length;
+    }
+
+    // Validate total size
+    if (totalSize !== originalSize) {
+      throw new Error(
+        `Size mismatch after splitting! Original: ${originalSize}, Chunks total: ${totalSize}`
+      );
     }
 
     // Create temp directory
-    await execAsync(`${commands.mkdir} ${TEMP_DIR}`);
+    mkdirSync(TEMP_DIR, { recursive: true });
 
-    // Process each chunk
-    const encodingCommands = [];
-    chunks.forEach((chunk, index) => {
-      const chunkPath = `${TEMP_DIR}/chunk_${index}`;
+    // Process each chunk using Node.js Buffer for base64 encoding
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const chunkPath = `${TEMP_DIR}/chunk_${i}`;
+
+      // Write the binary chunk for validation and future use
       writeFileSync(chunkPath, chunk);
-      const command = `echo "EXCEL_FILE_CHUNK_${
-        index + 1
-      }" && ${commands.base64(chunkPath)}`;
-      encodingCommands.push(command);
-    });
 
-    // Execute commands and collect output
-    const results = await Promise.all(
-      encodingCommands.map((cmd) => execAsync(cmd))
-    );
+      // Validate chunk was written correctly
+      const writtenSize = statSync(chunkPath).size;
+      if (writtenSize !== chunk.length) {
+        throw new Error(
+          `Chunk ${i} size mismatch! Expected: ${chunk.length}, Got: ${writtenSize}`
+        );
+      }
 
-    // Format output for easy copying to GitHub Secrets
-    for (let i = 0; i < results.length; i++) {
+      // Use Node.js Buffer for base64 encoding - consistent across platforms
       const secretName = `EXCEL_FILE_CHUNK_${i + 1}`;
-      const secretValue = results[i].stdout.trim();
+      const secretValue = Buffer.from(chunk).toString("base64");
+
+      // Validate base64 string
+      if (secretValue.length % 4 !== 0) {
+        throw new Error(`Invalid base64 padding in chunk ${i + 1}`);
+      }
+
       await updateGithubSecret(secretName, secretValue);
     }
 
-    // Clean up
-    await execAsync(`${commands.rmrf} ${TEMP_DIR}`);
+    // Clean up temp directory when done
+    //rmSync(TEMP_DIR, { recursive: true, force: true });
 
     console.log("✅ Successfully split Excel file into 6 chunks");
+    console.log("🔍 Validations passed:");
+    console.log(`   - Original size: ${originalSize} bytes`);
+    console.log(`   - Total chunks size: ${totalSize} bytes`);
+    console.log(`   - All chunks properly base64 encoded`);
+    console.log("🔑 Secrets updated on GitHub");
   } catch (error) {
+    // Clean up temp directory on error
+    try {
+      rmSync(TEMP_DIR, { recursive: true, force: true });
+    } catch (cleanupError) {
+      console.error("❌ Failed to clean up temp directory:", cleanupError);
+    }
+
     console.error("❌ Error:", error);
-    if (error.stdout) console.error("stdout:", error.stdout);
-    if (error.stderr) console.error("stderr:", error.stderr);
     process.exit(1);
   }
 }
