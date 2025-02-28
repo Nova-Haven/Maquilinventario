@@ -16,7 +16,7 @@ const octokit = new Octokit({
 
 // Configuration
 const NUM_CHUNKS = 6;
-const FILE_PATH = `./data/${VITE_EXCEL_FILE}`;
+const FILE_PATH = `./public/assets/${VITE_EXCEL_FILE}`;
 const TEMP_DIR = "./.temp";
 
 async function splitAndEncodeFile() {

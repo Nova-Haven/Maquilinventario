@@ -22,7 +22,7 @@ jobs:
       - name: Combine Excel chunks
         id: combine
         run: |
-          mkdir -p dist/data
+          mkdir -p public/assets
           # Execute the Node.js script and capture its JSON output
           OUTPUT=$(node scripts/combineChunks.min.js)
           # Extract values using jq
