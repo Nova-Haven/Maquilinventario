@@ -24,7 +24,7 @@ jobs:
         run: |
           mkdir -p dist/data
           # Execute the Node.js script and capture its JSON output
-          OUTPUT=$(node scripts/combine-chunks.min.js)
+          OUTPUT=$(node scripts/combineChunks.min.js)
           # Extract values using jq
           EXCEL_SIZE=$(echo $OUTPUT | jq -r .size)
           EXCEL_PATH=$(echo $OUTPUT | jq -r .path)
