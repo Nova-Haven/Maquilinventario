@@ -12,11 +12,11 @@ async function loadExcel() {
   XLSX = xlsxModule.default;
   const tableContainer = document.getElementById("excelTable");
   const loadingMessage = document.createElement("div");
-  loadingMessage.textContent = "Cargando datos...";
+  loadingMessage.textContent = "Cargando datos";
   tableContainer.parentNode.insertBefore(loadingMessage, tableContainer);
 
   try {
-    const response = await fetch("/data/" + import.meta.env.VITE_EXCEL_FILE);
+    const response = await fetch(`/data/${import.meta.env.VITE_EXCEL_FILE}`);
     if (!response.ok) throw new Error("No se pudo cargar el archivo Excel");
 
     const arrayBuffer = await response.arrayBuffer();

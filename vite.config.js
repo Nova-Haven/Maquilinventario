@@ -4,6 +4,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        assetFileNames: "assets/[name].[ext]",
         manualChunks: (id) => {
           if (id.includes("node_modules/xlsx")) {
             return "xlsx";

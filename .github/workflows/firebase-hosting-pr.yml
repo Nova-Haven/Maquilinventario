@@ -19,6 +19,27 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Combine Excel chunks
+        id: combine
+        run: |
+          mkdir -p dist/data
+          # Execute the Node.js script and capture its JSON output
+          OUTPUT=$(node scripts/combineChunks.min.js)
+          # Extract values using jq
+          EXCEL_SIZE=$(echo $OUTPUT | jq -r .size)
+          EXCEL_PATH=$(echo $OUTPUT | jq -r .path)
+          # Set output variables
+          echo "✅ Excel file created: $EXCEL_SIZE bytes"
+          echo "📁 Location: $EXCEL_PATH"
+        env:
+          EXCEL_FILE_CHUNK_1: ${{ secrets.EXCEL_FILE_CHUNK_1 }}
+          EXCEL_FILE_CHUNK_2: ${{ secrets.EXCEL_FILE_CHUNK_2 }}
+          EXCEL_FILE_CHUNK_3: ${{ secrets.EXCEL_FILE_CHUNK_3 }}
+          EXCEL_FILE_CHUNK_4: ${{ secrets.EXCEL_FILE_CHUNK_4 }}
+          EXCEL_FILE_CHUNK_5: ${{ secrets.EXCEL_FILE_CHUNK_5 }}
+          EXCEL_FILE_CHUNK_6: ${{ secrets.EXCEL_FILE_CHUNK_6 }}
+          VITE_EXCEL_FILE: ${{ secrets.VITE_EXCEL_FILE }}
+
       - name: Install dependencies
         run: bun install
 

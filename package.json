@@ -6,14 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build --mode production",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "split-excel": "node scripts/splitExcel.min.js"
   },
   "devDependencies": {
-    "vite": "^6.1.0",
+    "dotenv": "^16.4.7",
     "firebase-tools": "^13.31.2",
-    "terser": "^5.39.0"
+    "libsodium-wrappers": "^0.7.15",
+    "vite": "^6.1.0"
   },
   "dependencies": {
+    "@octokit/rest": "^21.1.1",
     "datatables.net-dt": "^2.2.2",
     "datatables.net-plugins": "^2.2.1",
     "firebase": "^11.3.1",
