@@ -11,8 +11,7 @@ async function loadExcel() {
   const xlsxModule = await import("xlsx");
   XLSX = xlsxModule.default;
   const tableContainer = document.getElementById("excelTable");
-  const loadingMessage = document.createElement("div");
-  loadingMessage.textContent = "Cargando datos";
+  const loadingMessage = document.getElementById("loadingMessage");
   tableContainer.parentNode.insertBefore(loadingMessage, tableContainer);
 
   try {

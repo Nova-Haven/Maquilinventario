@@ -140,7 +140,7 @@ h1 {
 }
 .dataTables_wrapper tfoot::before,
 .dataTables_wrapper thead::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   right: 0;
@@ -234,10 +234,10 @@ h1 {
   display: none;
 }
 #loading {
-  text-align: center;
-  padding: 2rem;
-  font-size: 1.2rem;
-  color: #666;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .number-cell {
   text-align: right;
