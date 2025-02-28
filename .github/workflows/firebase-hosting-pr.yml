@@ -22,14 +22,18 @@ jobs:
       - name: Combine Excel chunks
         run: |
           mkdir -p dist/data
-          (
+          # First collect all chunks in a temporary file
+          {
             echo "${{ secrets.EXCEL_FILE_CHUNK_1 }}"
             echo "${{ secrets.EXCEL_FILE_CHUNK_2 }}"
             echo "${{ secrets.EXCEL_FILE_CHUNK_3 }}"
             echo "${{ secrets.EXCEL_FILE_CHUNK_4 }}"
             echo "${{ secrets.EXCEL_FILE_CHUNK_5 }}"
             echo "${{ secrets.EXCEL_FILE_CHUNK_6 }}"
-          ) | base64 --decode > "dist/data/${{ secrets.VITE_EXCEL_FILE }}"
+          } > temp_chunks.b64
+          # Then decode the collected chunks
+          base64 -d temp_chunks.b64 > "dist/data/${{ secrets.VITE_EXCEL_FILE }}"
+          rm temp_chunks.b64
 
       - name: Install dependencies
         run: bun install
