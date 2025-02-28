@@ -1,19 +1,25 @@
-/* Base styles */
 :root {
   font-family: Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: rgba(0, 0, 0, 0.87);
-  background-color: #ffffff;
+  background-color: #ededed;
 }
-
 body {
   margin: 0;
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
 }
-
+thead {
+  color: #ffffff;
+}
+tbody {
+  color: #000000;
+}
+tfoot {
+  color: #fff;
+}
 .error-message {
   color: #dc3545;
   background-color: rgba(220, 53, 69, 0.1);
@@ -24,42 +30,34 @@ body {
   font-size: 14px;
   display: none;
 }
-
 .error-message:not(:empty) {
   display: block;
 }
-
 h1 {
   text-align: center;
 }
-
 #period {
   color: #666;
   text-align: center;
 }
-
-/* Login form styles */
 .container {
   max-width: 400px;
   margin: 60px auto;
   padding: 40px;
   border-radius: 12px;
-  background: white;
+  background: #fff;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   text-align: center;
 }
-
 .container h2 {
   margin-bottom: 30px;
   color: #333;
   font-size: 24px;
 }
-
 .form-group {
   margin-bottom: 20px;
   text-align: left;
 }
-
 .form-group label {
   display: block;
   margin-bottom: 8px;
@@ -67,7 +65,6 @@ h1 {
   font-size: 14px;
   font-weight: 500;
 }
-
 .form-group input {
   width: 100%;
   padding: 12px;
@@ -77,18 +74,16 @@ h1 {
   transition: border-color 0.3s ease;
   box-sizing: border-box;
 }
-
 .form-group input:focus {
-  outline: none;
-  border-color: #4caf50;
+  outline: 0;
+  border-color: #4f82b1;
   box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
-
 .btn {
   width: 100%;
   padding: 12px;
-  background-color: #4caf50;
-  color: white;
+  background-color: #4f82b1;
+  color: #fff;
   border: none;
   border-radius: 8px;
   font-size: 16px;
@@ -96,36 +91,29 @@ h1 {
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
-
 .btn:hover {
-  background-color: #45a049;
+  background-color: #0d4e8a;
 }
-
 .btn:active {
   transform: translateY(1px);
 }
-
-/* Table styles */
 #excelTable {
   width: 100%;
-  table-layout: fixed; /* Fixed table layout */
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   margin: 1rem 0;
 }
-
 #excelTable tfoot {
   position: sticky;
   bottom: 0;
-  background: white;
-  border-top: 2px solid #dee2e6;
-  font-weight: bold;
+  background: #4f82b1;
+  border-top: 2px solid #000000;
+  font-weight: 700;
 }
-
 #excelTable tfoot td {
-  border-top: 2px solid #dee2e6;
+  border-top: 2px solid #000000;
 }
-
 .excel-container {
   width: 100%;
   max-width: 100%;
@@ -133,104 +121,84 @@ h1 {
   box-sizing: border-box;
   position: relative;
 }
-
-/* DataTable wrapper styles */
 .dataTables_wrapper {
   position: relative;
-  max-height: 80vh; /* Adjust this value as needed */
+  max-height: 80vh;
   overflow: auto;
 }
-
-/* Sticky header */
 .dataTables_wrapper thead th {
   position: sticky !important;
   top: 0;
   z-index: 10;
-  background: white;
+  background: #4f82b1;
 }
-
-/* Sticky footer */
 .dataTables_wrapper tfoot td {
   position: sticky !important;
   bottom: 0;
   z-index: 10;
-  background: white;
+  background: #4f82b1;
 }
-
-/* Add shadow effects */
-.dataTables_wrapper thead::after,
-.dataTables_wrapper tfoot::before {
-  content: "";
+.dataTables_wrapper tfoot::before,
+.dataTables_wrapper thead::after {
+  content: '';
   position: absolute;
   left: 0;
   right: 0;
   height: 4px;
 }
-
 .dataTables_wrapper thead::after {
   bottom: 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-
 .dataTables_wrapper tfoot::before {
   top: -4px;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
 }
-#excelTable th,
-#excelTable td {
-  border: 1px solid #e0e0e0;
+#excelTable td,
+#excelTable th {
+  border: 1px solid #000000;
   padding: 12px 8px;
-  white-space: normal; /* Allow text wrapping */
+  white-space: normal;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  min-width: 80px; /* Minimum width for columns */
+  min-width: 80px;
 }
-
 #excelTable thead th {
-  background-color: #f8f9fa;
-  border-bottom: 2px solid #dee2e6;
+  background-color: #4f82b1;
+  border-bottom: 2px solid#4f82b1;
   font-weight: 600;
   position: sticky;
   top: 0;
   z-index: 1;
 }
-
-/* DataTables specific styles */
 .dataTables_wrapper {
   width: 100%;
   margin: 0 auto;
   padding: 0;
   box-sizing: border-box;
 }
-
-.datatable-header,
-.datatable-footer {
+.datatable-footer,
+.datatable-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 0;
   width: 100%;
 }
-
-/* Search and controls */
 .dt-length .dt-input {
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 3px solid #4f82b1;
   border-radius: 10px;
   margin: 0 4px;
   min-width: 60px;
 }
-
-/* Search input styling */
 .dt-search .dt-input {
   padding: 8px 16px;
-  border: 1px solid #ddd;
+  border: 3px solid #4f82b1;
   border-radius: 10px;
   margin-left: 8px;
   min-width: 150px;
 }
-
-/* Pagination */
 .pagination-wrapper {
   display: flex;
   justify-content: center;
@@ -239,35 +207,29 @@ h1 {
   margin-top: 1rem;
   gap: 2rem;
 }
-
 .pagination-controls {
   display: flex;
   justify-content: center;
 }
-
 .pagination-info {
   white-space: nowrap;
 }
-
 .paginate_button {
   padding: 6px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid #000000;
   border-radius: 4px;
   cursor: pointer;
   margin: 0 2px;
 }
-
 .paginate_button.current {
   background-color: #4caf50;
-  color: white;
+  color: #000000;
   border-color: #4caf50;
 }
-
 .paginate_button:hover:not(.current) {
-  background-color: #f0f0f0;
+  background-color: #000000;
 }
 
-/* Utility classes */
 #content {
   display: none;
 }
@@ -277,8 +239,6 @@ h1 {
   font-size: 1.2rem;
   color: #666;
 }
-
-/* Ensure numbers are right-aligned */
 .number-cell {
   text-align: right;
 }
