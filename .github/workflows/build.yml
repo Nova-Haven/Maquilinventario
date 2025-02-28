@@ -27,16 +27,16 @@ jobs:
       - name: Combine Excel chunks
         run: |
           mkdir -p dist/data
-          # First collect all chunks in a temporary file
-          {
-            echo "${{ secrets.EXCEL_FILE_CHUNK_1 }}"
-            echo "${{ secrets.EXCEL_FILE_CHUNK_2 }}"
-            echo "${{ secrets.EXCEL_FILE_CHUNK_3 }}"
-            echo "${{ secrets.EXCEL_FILE_CHUNK_4 }}"
-            echo "${{ secrets.EXCEL_FILE_CHUNK_5 }}"
-            echo "${{ secrets.EXCEL_FILE_CHUNK_6 }}"
-          } > temp_chunks.b64
-          # Then decode the collected chunks
+          # Ensure each chunk is on its own line and properly formatted
+          printf "%s\n" "${{ secrets.EXCEL_FILE_CHUNK_1 }}" > temp_chunks.b64
+          printf "%s\n" "${{ secrets.EXCEL_FILE_CHUNK_2 }}" >> temp_chunks.b64
+          printf "%s\n" "${{ secrets.EXCEL_FILE_CHUNK_3 }}" >> temp_chunks.b64
+          printf "%s\n" "${{ secrets.EXCEL_FILE_CHUNK_4 }}" >> temp_chunks.b64
+          printf "%s\n" "${{ secrets.EXCEL_FILE_CHUNK_5 }}" >> temp_chunks.b64
+          printf "%s\n" "${{ secrets.EXCEL_FILE_CHUNK_6 }}" >> temp_chunks.b64
+          # Remove any empty lines that might cause base64 errors
+          sed -i '/^[[:space:]]*$/d' temp_chunks.b64
+          # Decode the chunks
           base64 -d temp_chunks.b64 > "dist/data/${{ secrets.VITE_EXCEL_FILE }}"
           rm temp_chunks.b64
 
