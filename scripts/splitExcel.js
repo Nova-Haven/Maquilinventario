@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync, statSync, mkdirSync, rmSync } from "fs";
-import { config } from "dotenv";
-import { Octokit } from "@octokit/rest";
 import sodium from "libsodium-wrappers";
+import { Octokit } from "@octokit/rest";
+import { createHash } from "crypto";
+import { config } from "dotenv";
 
 config();
 
@@ -25,10 +26,14 @@ async function splitAndEncodeFile() {
     if (originalSize === 0) {
       throw new Error("❌ Error: Excel file is empty");
     }
-    console.log(`📊 Original file size: ${originalSize} bytes`);
-
     const fileBuffer = readFileSync(FILE_PATH);
     const chunkSize = Math.ceil(fileBuffer.length / NUM_CHUNKS);
+    const base64Chunks = [];
+
+    // Add debug info for original file
+    const originalHash = createHash("sha256").update(fileBuffer).digest("hex");
+    console.log(`🔒 Original file hash: ${originalHash}`);
+    console.log(`📊 Original file size: ${originalSize} bytes`);
 
     // Split into exactly 6 chunks
     const chunks = [];
@@ -36,47 +41,58 @@ async function splitAndEncodeFile() {
     for (let i = 0; i < NUM_CHUNKS; i++) {
       const start = i * chunkSize;
       const end = Math.min(start + chunkSize, fileBuffer.length);
-      const chunk = new Uint8Array(fileBuffer).subarray(start, end);
+      const chunk = fileBuffer.subarray(start, end);
+      const chunkPath = `${TEMP_DIR}/chunk_${i}`; // Define chunkPath here
+
+      // Write and validate chunk
+      writeFileSync(chunkPath, chunk);
+      const writtenSize = statSync(chunkPath).size;
+
       chunks.push(chunk);
       totalSize += chunk.length;
+
+      // Add chunk-specific debug info
+      console.log(`📦 Chunk ${i + 1}:`);
+      console.log(`   Size: ${chunk.length} bytes`);
+      console.log(`   Written size: ${writtenSize} bytes`);
+
+      // Base64 encode with validation
+      const secretName = `EXCEL_FILE_CHUNK_${i + 1}`;
+      const secretValue = Buffer.from(chunk).toString("base64");
+      base64Chunks.push(secretValue); // Store the base64 string
+
+      // Validate base64 content
+      const decodedSize = Buffer.from(secretValue, "base64").length;
+      if (decodedSize !== chunk.length) {
+        throw new Error(
+          `Base64 validation failed for chunk ${i + 1}! ` +
+            `Original: ${chunk.length}, Decoded: ${decodedSize}`
+        );
+      }
+
+      console.log(`   Base64 length: ${secretValue.length}`);
+      console.log(`   Decoded size matches: ✅`);
+
+      await updateGithubSecret(secretName, secretValue);
     }
+
+    // Verify total content using stored base64 strings
+    const decodedChunks = base64Chunks.map((str) => Buffer.from(str, "base64"));
+    const combinedBuffer = Buffer.concat(decodedChunks);
+    const finalHash = createHash("sha256").update(combinedBuffer).digest("hex");
+
+    console.log("\n🔍 Final validation:");
+    console.log(`   Original size: ${originalSize} bytes`);
+    console.log(`   Final size: ${combinedBuffer.length} bytes`);
+    console.log(`   Original hash: ${originalHash}`);
+    console.log(`   Final hash: ${finalHash}`);
+    console.log(`   Hashes match: ${originalHash === finalHash ? "✅" : "❌"}`);
 
     // Validate total size
     if (totalSize !== originalSize) {
       throw new Error(
         `Size mismatch after splitting! Original: ${originalSize}, Chunks total: ${totalSize}`
       );
-    }
-
-    // Create temp directory
-    mkdirSync(TEMP_DIR, { recursive: true });
-
-    // Process each chunk using Node.js Buffer for base64 encoding
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const chunkPath = `${TEMP_DIR}/chunk_${i}`;
-
-      // Write the binary chunk for validation and future use
-      writeFileSync(chunkPath, chunk);
-
-      // Validate chunk was written correctly
-      const writtenSize = statSync(chunkPath).size;
-      if (writtenSize !== chunk.length) {
-        throw new Error(
-          `Chunk ${i} size mismatch! Expected: ${chunk.length}, Got: ${writtenSize}`
-        );
-      }
-
-      // Use Node.js Buffer for base64 encoding - consistent across platforms
-      const secretName = `EXCEL_FILE_CHUNK_${i + 1}`;
-      const secretValue = Buffer.from(chunk).toString("base64");
-
-      // Validate base64 string
-      if (secretValue.length % 4 !== 0) {
-        throw new Error(`Invalid base64 padding in chunk ${i + 1}`);
-      }
-
-      await updateGithubSecret(secretName, secretValue);
     }
 
     // Clean up temp directory when done
@@ -148,5 +164,8 @@ if (missingVars.length > 0) {
   );
   process.exit(1);
 }
+
+// Create temp directory
+mkdirSync(TEMP_DIR, { recursive: true });
 
 splitAndEncodeFile();

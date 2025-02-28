@@ -22,8 +22,8 @@ if (chunks.length !== 6) {
 }
 
 // Combine and decode chunks
-const combined = chunks.join("");
-const decoded = Buffer.from(combined, "base64");
+const binaryChunks = chunks.map((chunk) => Buffer.from(chunk, "base64"));
+const decoded = Buffer.concat(binaryChunks);
 
 // Write output file
 const outputFile = join(outputDir, process.env.VITE_EXCEL_FILE);
