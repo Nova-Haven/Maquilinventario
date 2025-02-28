@@ -1,10 +1,10 @@
-const fs = require("fs");
-const path = require("path");
+import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { join } from "path";
 
 // Create necessary directories
-const outputDir = path.join("dist", "data");
-if (!fs.existsSync(outputDir)) {
-  fs.mkdirSync(outputDir, { recursive: true });
+const outputDir = join("dist", "data");
+if (!existsSync(outputDir)) {
+  mkdirSync(outputDir, { recursive: true });
 }
 
 // Get all chunks from secrets
@@ -26,7 +26,13 @@ const combined = chunks.join("");
 const decoded = Buffer.from(combined, "base64");
 
 // Write output file
-const outputFile = path.join(outputDir, process.env.VITE_EXCEL_FILE);
-fs.writeFileSync(outputFile, decoded);
+const outputFile = join(outputDir, process.env.VITE_EXCEL_FILE);
+writeFileSync(outputFile, decoded);
 
-console.log('{"size": ' + decoded.length + ', "path": "' + outputFile + '"}');
+// Output JSON formatted result
+console.log(
+  JSON.stringify({
+    size: decoded.length,
+    path: outputFile,
+  })
+);
