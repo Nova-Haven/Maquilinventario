@@ -94,10 +94,3 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TESTING_MAQUILA }}
           channelId: live
           projectId: testing-maquila
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-          compression-level: 9
