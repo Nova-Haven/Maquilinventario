@@ -19,10 +19,17 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Copy Excel file
+      - name: Combine Excel chunks
         run: |
           mkdir -p dist/data
-          cp public/data/${{ secrets.VITE_EXCEL_FILE }} dist/data/
+          (
+            echo "${{ secrets.EXCEL_FILE_CHUNK_1 }}"
+            echo "${{ secrets.EXCEL_FILE_CHUNK_2 }}"
+            echo "${{ secrets.EXCEL_FILE_CHUNK_3 }}"
+            echo "${{ secrets.EXCEL_FILE_CHUNK_4 }}"
+            echo "${{ secrets.EXCEL_FILE_CHUNK_5 }}"
+            echo "${{ secrets.EXCEL_FILE_CHUNK_6 }}"
+          ) | base64 --decode > "dist/data/${{ secrets.VITE_EXCEL_FILE }}"
 
       - name: Install dependencies
         run: bun install
