@@ -33,6 +33,15 @@ tfoot {
 .error-message:not(:empty) {
   display: block;
 }
+.loading-container {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.loading-container img {
+  margin-right: 10px;
+  vertical-align: middle;
+}
 h1 {
   text-align: center;
 }

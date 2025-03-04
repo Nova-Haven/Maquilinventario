@@ -1,18 +1,25 @@
 <div class="excel-container">
-  <h1 id="title">
-    <div id="loading">
-      <img src="/assets/loading.gif" alt="Cargando..." />
-    </div>
-  </h1>
+  <h1 id="title"></h1>
+  <h3 id="loadingMessage">
+    <img src="/assets/loading.gif" alt="Cargando..." />
+  </h3>
+
+  <h2 id="tab"></h2>
   <h3 id="period"></h3>
   <div id="extraData">
     <h4 id="rfc"></h4>
     <h4 id="immex"></h4>
     <h5 id="financialAddr"></h5>
   </div>
-  <h3 id="loadingMessage"></h3>
-  <table id="excelTable">
-    <thead></thead>
-    <tbody></tbody>
-  </table>
+  <div class="nav-tabs">
+    <button id="inventoryTab" class="tab-btn active">Inventario</button>
+    <button id="catalogTab" class="tab-btn">Catálogo</button>
+  </div>
+
+  <div id="tableContainer">
+    <table id="inventoryTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </div>
