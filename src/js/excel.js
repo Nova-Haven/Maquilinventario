@@ -1,9 +1,19 @@
 import $ from "jquery";
-import DataTable from "datatables.net-dt";
 import languageES from "datatables.net-plugins/i18n/es-ES.mjs";
+import "datatables.net-buttons/js/buttons.colVis.mjs";
+import "datatables.net-buttons/js/buttons.html5.mjs";
+import "datatables.net-buttons/js/buttons.print.mjs";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+import pdfMake from "pdfmake/build/pdfmake";
+import DataTable from "datatables.net-dt";
+import "datatables.net-buttons";
+import Swal from "sweetalert2";
+import JSZip from "jszip";
 
 // Make DataTable available on jQuery
 $.DataTable = DataTable;
+window.JSZip = JSZip;
+pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
 
 let XLSX;
 
@@ -266,20 +276,25 @@ function displayTable(data) {
       const td = document.createElement("td");
 
       // Special handling for error column
-      if (index === 11 && cell) {
-        td.textContent = cell; // Show the error number
+      if (index === 11) {
+        if (cell) {
+          td.textContent = cell; // Show the error number
 
-        // Find matching note
-        const note = data.data.notes.find((note) =>
-          note.startsWith(`(${cell})`)
-        );
+          // Find matching note
+          const note = data.data.notes.find((note) =>
+            note.startsWith(`(${cell})`)
+          );
 
-        if (note) {
-          td.classList.add("has-tooltip");
-          td.title = note; // Add tooltip with full note text
+          if (note) {
+            td.classList.add("has-tooltip");
+            td.title = note; // Add tooltip with full note text
+          }
+        } else {
+          // Leave empty for error column when no error
+          td.textContent = "";
         }
       } else {
-        // Normal cell handling
+        // Normal cell handling (for non-error columns)
         td.textContent = cell !== undefined && cell !== null ? cell : "0";
       }
 
@@ -342,6 +357,188 @@ function displayTable(data) {
       lengthMenu: "_MENU_ por página",
       searchPlaceholder: "Buscar...",
     },
+    buttons: [
+      {
+        extend: "pdfHtml5",
+        text: '<i class="fa fa-file-pdf-o"></i> Exportar PDF',
+        titleAttr: "Exportar a PDF",
+        className: "btn-export btn-pdf",
+        exportOptions: {
+          columns: ":visible",
+        },
+        orientation: "landscape",
+        pageSize: "LEGAL",
+        title: `${title} - ${periodText}`,
+        action: function (e, dt, button, config) {
+          // Show loading
+          const loadingAlert = Swal.fire({
+            title: "Generando PDF...",
+            text: "Por favor espere...",
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
+
+          // Use a timeout to ensure the alert shows up
+          setTimeout(() => {
+            try {
+              // Get table data
+              const exportData = dt.buttons.exportData(config.exportOptions);
+
+              // Create document definition
+              const docDefinition = {
+                pageSize: "LEGAL",
+                pageOrientation: "landscape",
+                content: [
+                  { text: `${title} - ${periodText}`, style: "header" },
+                  {
+                    margin: [0, 10, 0, 10],
+                    stack: [
+                      {
+                        columns: [
+                          {
+                            text: `RFC: ${
+                              document.getElementById("rfc")?.textContent || ""
+                            }`,
+                            fontSize: 10,
+                            width: "50%",
+                          },
+                          {
+                            text: `IMMEX: ${
+                              document.getElementById("immex")?.textContent ||
+                              ""
+                            }`,
+                            fontSize: 10,
+                            width: "50%",
+                          },
+                        ],
+                      },
+                      {
+                        text: `Domicilio fiscal: ${
+                          document.getElementById("financialAddr")
+                            ?.textContent || ""
+                        }`,
+                        fontSize: 10,
+                        margin: [0, 5, 0, 0],
+                      },
+                    ],
+                  },
+                  {
+                    table: {
+                      headerRows: 1,
+                      widths: Array(exportData.header.length).fill("auto"),
+                      body: [exportData.header, ...exportData.body],
+                    },
+                    layout: {
+                      hLineWidth: () => 0.5,
+                      vLineWidth: () => 0.5,
+                      hLineColor: () => "#aaa",
+                      vLineColor: () => "#aaa",
+                      fillColor: (i) => (i % 2 === 0 ? "#f8f8f8" : null),
+                    },
+                  },
+                  {
+                    text: "Leyenda de errores de existencia o costos:",
+                    style: "subheader",
+                    margin: [0, 15, 0, 5],
+                  },
+                  {
+                    table: {
+                      headerRows: 0,
+                      widths: ["3%", "97%"],
+                      body: data.data.notes.map((note) => {
+                        // Extract code and description from note text (e.g., "(1) Some error description")
+                        const match = note.match(/^\((\d+)\)\s*(.*)/);
+                        if (match) {
+                          return [
+                            { text: match[1], alignment: "center", bold: true }, // Error code
+                            { text: match[2].trim() }, // Error description
+                          ];
+                        }
+                        return [{ text: "", alignment: "center" }, note]; // Fallback if format doesn't match
+                      }),
+                    },
+                    layout: {
+                      hLineWidth: function () {
+                        return 0;
+                      },
+                      vLineWidth: function () {
+                        return 0;
+                      },
+                      hLineColor: function () {
+                        return "#aaaaaa";
+                      },
+                      vLineColor: function () {
+                        return "#aaaaaa";
+                      },
+                      paddingLeft: function () {
+                        return 5;
+                      },
+                      paddingRight: function () {
+                        return 5;
+                      },
+                      paddingTop: function () {
+                        return 3;
+                      },
+                      paddingBottom: function () {
+                        return 3;
+                      },
+                    },
+                    style: "errorTable",
+                    margin: [0, 0, 0, 10],
+                  },
+                ],
+                styles: {
+                  header: {
+                    fontSize: 14,
+                    bold: true,
+                    margin: [0, 0, 0, 10],
+                    alignment: "center",
+                  },
+                  tableHeader: {
+                    fontSize: 10,
+                    bold: true,
+                    alignment: "center",
+                  },
+                  errorTable: {
+                    fontSize: 9,
+                    margin: [0, 5, 0, 15],
+                  },
+                },
+                defaultStyle: {
+                  fontSize: 9,
+                },
+              };
+
+              // Generate PDF
+              pdfMake
+                .createPdf(docDefinition)
+                .download(`${title} - ${periodText}.pdf`);
+
+              // Show success after a delay
+              setTimeout(() => {
+                Swal.fire({
+                  title: "PDF Generado",
+                  text: "El documento ha sido generado exitosamente",
+                  icon: "success",
+                  timer: 2000,
+                  timerProgressBar: true,
+                });
+              }, 500);
+            } catch (error) {
+              console.error("Error generating PDF:", error);
+              Swal.fire({
+                title: "Error",
+                text: "No se pudo generar el PDF",
+                icon: "error",
+              });
+            }
+          }, 300);
+        },
+      },
+    ],
+    // Update DOM to include buttons
     dom: '<"datatable-header"<"left"l><"center"B><"right"f>>rt<"datatable-footer"<"pagination-wrapper"<"pagination-info"i><"pagination-controls"p>>>',
     scrollX: false,
     //scrollY: "60vh",

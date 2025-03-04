@@ -2,6 +2,7 @@ import { auth } from "./js/fb.min";
 import {} from "xlsx";
 import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import "./style.min.css";
+import "./css/excel.min.css";
 
 document.addEventListener("DOMContentLoaded", function () {
   const loadingEl = document.getElementById("loading");
@@ -28,6 +29,23 @@ document.addEventListener("DOMContentLoaded", function () {
         const response = await fetch("/pages/excel.html");
         const html = await response.text();
         contentEl.innerHTML = html;
+        // Get elements
+        const rfcElement = document.getElementById("rfc");
+        const immexElement = document.getElementById("immex");
+        const addrElement = document.getElementById("financialAddr");
+
+        // Set content with null checks
+        if (rfcElement && import.meta.env.VITE_RFC) {
+          rfcElement.textContent = import.meta.env.VITE_RFC;
+        }
+
+        if (immexElement && import.meta.env.VITE_IMMEX) {
+          immexElement.textContent = import.meta.env.VITE_IMMEX;
+        }
+
+        if (addrElement && import.meta.env.VITE_FINANCIAL_ADDR) {
+          addrElement.textContent = import.meta.env.VITE_FINANCIAL_ADDR;
+        }
         loadExcel();
       } catch (error) {
         console.error("Error loading content:", error);
