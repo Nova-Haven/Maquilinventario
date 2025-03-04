@@ -1,5 +1,5 @@
-const { writeFileSync, existsSync, mkdirSync } = require("fs");
-const { createHash } = require("crypto");
+import { writeFileSync, existsSync, mkdirSync } from "fs";
+import { createHash } from "crypto";
 
 // Helper function to ensure directories exist
 function ensureDirectories() {
