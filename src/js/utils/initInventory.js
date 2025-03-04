@@ -1,7 +1,7 @@
 import $ from "jquery";
 import languageES from "datatables.net-plugins/i18n/es-ES.mjs";
-import pdfMake from "pdfmake/build/pdfmake";
-import Swal from "sweetalert2";
+
+const Swal = window.Swal;
 
 export function initInventory(data, title, periodText) {
   const defaultPageLength = 10;
@@ -190,9 +190,25 @@ export function initInventory(data, title, periodText) {
               };
 
               // Generate PDF
-              pdfMake
-                .createPdf(docDefinition)
-                .download(`${title} - ${periodText}.pdf`);
+              const generatePDF = () => {
+                // Use the global pdfMake object from CDN
+                if (window.pdfMake) {
+                  window.pdfMake
+                    .createPdf(docDefinition)
+                    .download(`${title} - ${periodText}.pdf`);
+                } else {
+                  console.error(
+                    "pdfMake is not available. Check your CDN imports."
+                  );
+                  Swal.fire({
+                    title: "Error",
+                    text: "No se pudo generar el PDF: pdfMake no está disponible",
+                    icon: "error",
+                  });
+                }
+              };
+
+              generatePDF();
 
               // Show success after a delay
               setTimeout(() => {

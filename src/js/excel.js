@@ -1,15 +1,12 @@
 import $ from "jquery";
 import "datatables.net-buttons";
-import pdfFonts from "pdfmake/build/vfs_fonts";
-import pdfMake from "pdfmake/build/pdfmake";
-import DataTable from "datatables.net-dt";
-import JSZip from "jszip";
+import "datatables.net-buttons-dt";
+import "datatables.net-buttons/js/buttons.html5.min.js";
 import { handleError } from "./utils/utils.min.js";
+import DataTable from "datatables.net-dt";
 
 // Make DataTable available on jQuery
 $.DataTable = DataTable;
-window.JSZip = JSZip;
-pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
 
 async function loadInventory() {
   try {
@@ -27,21 +24,12 @@ async function loadInventory() {
 
     // Dynamic imports for the modules we need
     const [
-      {
-        initializeXLSX,
-        extractName,
-        extractPeriod,
-        extractInventoryData,
-        extractTotals,
-      },
+      { extractName, extractPeriod, extractInventoryData, extractTotals },
       { displayInventoryTable },
     ] = await Promise.all([
-      import("./utils/excel.min.js"),
+      import("./utils/excelite.min.js"),
       import("./display/inventory.min.js"),
     ]);
-
-    // Initialize XLSX
-    const XLSX = await initializeXLSX();
 
     // Load Excel file
     const response = await fetch(
@@ -89,15 +77,9 @@ async function loadCatalog() {
       loadingMessage.style.display = "block";
     }
 
-    // Dynamic imports for the modules we need
-    const [{ initializeXLSX, extractCatalogData }, { displayCatalogTable }] =
-      await Promise.all([
-        import("./utils/excel.min.js"),
-        import("./display/catalog.min.js"),
-      ]);
-
-    // Initialize XLSX
-    const XLSX = await initializeXLSX();
+    const [{ extractCatalogData }, { displayCatalogTable }] = await Promise.all(
+      [import("./utils/excelite.min.js"), import("./display/catalog.min.js")]
+    );
 
     // Load Excel file
     const response = await fetch(

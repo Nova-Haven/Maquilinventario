@@ -1,4 +1,4 @@
-let XLSX;
+const XLSX = window.XLSX;
 
 function extractPeriod(sheet) {
   const periodCell = sheet["A4"] || {};
@@ -109,14 +109,6 @@ function extractTotals(sheet) {
       inventario_final: totalsRow[12],
     },
   };
-}
-
-export async function initializeXLSX() {
-  if (!XLSX) {
-    const xlsxModule = await import("xlsx");
-    XLSX = xlsxModule.default;
-  }
-  return XLSX;
 }
 
 export {

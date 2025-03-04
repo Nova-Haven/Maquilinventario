@@ -76,6 +76,6 @@ export function displayCatalogTable(data) {
 
   // Import DataTables functionality on demand
   import("../utils/initCatalog.min.js").then((module) => {
-    module.initCatalogDataTable();
+    module.initCatalog();
   });
 }

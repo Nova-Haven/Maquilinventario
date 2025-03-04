@@ -1,5 +1,4 @@
 import { auth } from "./js/fb.min";
-import {} from "xlsx";
 import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import "./style.min.css";
 import "./css/excel.min.css";

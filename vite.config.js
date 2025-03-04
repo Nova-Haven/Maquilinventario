@@ -1,23 +1,19 @@
 import { defineConfig } from "vite";
+import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
+  plugins: [visualizer()],
   build: {
     rollupOptions: {
       output: {
-        assetFileNames: "assets/[name].[ext]",
-        manualChunks: (id) => {
-          if (id.includes("node_modules/xlsx")) {
-            return "xlsx";
-          }
-          if (id.includes("node_modules/datatables")) {
-            return "datatables";
-          }
-          if (id.includes("node_modules/jquery")) {
-            return "vendor";
-          }
-          if (id.includes("node_modules/firebase")) {
-            return "firebase";
-          }
+        manualChunks: {
+          vendor: ["jquery"],
+          datatables: [
+            "datatables.net-dt",
+            "datatables.net-buttons",
+            "datatables.net-buttons-dt",
+          ],
+          firebase: ["firebase/app", "firebase/auth"],
         },
       },
     },
@@ -30,6 +26,6 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["xlsx", "jquery", "datatables.net-dt"],
+    include: ["jquery", "datatables.net-dt"],
   },
 });
