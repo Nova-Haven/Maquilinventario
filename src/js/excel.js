@@ -17,15 +17,24 @@ pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
 
 let XLSX;
 
-async function loadExcel() {
+async function loadInventory() {
   const xlsxModule = await import("xlsx");
   XLSX = xlsxModule.default;
-  const tableContainer = document.getElementById("excelTable");
+  const tableContainer = document.getElementById("inventoryTable");
   const loadingMessage = document.getElementById("loadingMessage");
-  tableContainer.parentNode.insertBefore(loadingMessage, tableContainer);
+  if (loadingMessage) {
+    loadingMessage.innerHTML =
+      '<img src="/assets/loading.gif" alt="Cargando..." /> Cargando...';
+    loadingMessage.style.display = "block";
+  }
+  if (tableContainer) {
+    tableContainer.parentNode.insertBefore(loadingMessage, tableContainer);
+  }
 
   try {
-    const response = await fetch(`assets/${import.meta.env.VITE_EXCEL_FILE}`);
+    const response = await fetch(
+      `assets/${import.meta.env.VITE_INVENTORY_FILE}`
+    );
     if (!response.ok) throw new Error("No se pudo cargar el archivo Excel");
 
     const arrayBuffer = await response.arrayBuffer();
@@ -36,16 +45,57 @@ async function loadExcel() {
     const extractedData = {
       name: extractName(sheet),
       period: extractPeriod(sheet),
-      data: extractMainData(sheet),
+      data: extractInventoryData(sheet),
       totals: extractTotals(sheet),
     };
 
-    displayTable(extractedData);
+    displayInventoryTable(extractedData);
   } catch (error) {
     console.error("Error:", error);
     loadingMessage.textContent = "Error al cargar los datos";
   } finally {
-    loadingMessage.remove();
+    if (loadingMessage) {
+      loadingMessage.style.display = "none";
+      loadingMessage.innerHTML = ""; // Clear content
+    }
+  }
+}
+
+async function loadCatalog() {
+  const xlsxModule = await import("xlsx");
+  XLSX = xlsxModule.default;
+  const tableContainer = document.getElementById("catalogTable");
+  const loadingMessage = document.getElementById("loadingMessage");
+  if (loadingMessage) {
+    loadingMessage.innerHTML =
+      '<img src="/assets/loading.gif" alt="Cargando..." /> Cargando...';
+    loadingMessage.style.display = "block";
+  }
+
+  if (tableContainer) {
+    tableContainer.parentNode.insertBefore(loadingMessage, tableContainer);
+  }
+
+  try {
+    const response = await fetch(`assets/${import.meta.env.VITE_CATALOG_FILE}`);
+    if (!response.ok) throw new Error("No se pudo cargar el catálogo");
+
+    const arrayBuffer = await response.arrayBuffer();
+    const data = new Uint8Array(arrayBuffer);
+    const workbook = XLSX.read(data, { type: "array" });
+    // Get first sheet only
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    const catalogData = extractCatalogData(sheet);
+    displayCatalogTable(catalogData);
+  } catch (error) {
+    console.error("Error:", error);
+    loadingMessage.textContent = "Error al cargar los datos del catálogo";
+  } finally {
+    if (loadingMessage) {
+      loadingMessage.style.display = "none";
+      loadingMessage.innerHTML = ""; // Clear content
+    }
   }
 }
 
@@ -65,7 +115,7 @@ function extractName(sheet) {
   return periodText;
 }
 
-function extractMainData(sheet) {
+function extractInventoryData(sheet) {
   const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
   // Find where the main data ends (where notes begin)
@@ -108,12 +158,60 @@ function extractMainData(sheet) {
   };
 }
 
+function extractCatalogData(sheet) {
+  const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+  // Find header row (row 3) and extract column headers
+  const headerRow = data[2] || [];
+
+  // Extract data starting from row 4 (index 3)
+  const catalogItems = data
+    .slice(3)
+    .filter((row) => row.length > 0 && row[0]) // Filter out empty rows
+    .map((row) => ({
+      codigo: row[0] || "",
+      nombre: row[1] || "",
+      precio: row[2] || 0,
+      fraccion: row[3] || "",
+      descripcion: row[4] || "",
+      fraccion2: row[5] || "",
+      observaciones: row[6] || "",
+    }));
+
+  return {
+    headers: headerRow,
+    items: catalogItems,
+  };
+}
+
 function formatNumber(num) {
   if (num === undefined || num === null) return "0";
   return num.toLocaleString("es-MX", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function formatDate(date) {
+  const months = [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+  ];
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+
+  return `${day}-${month}-${year}`;
 }
 
 function extractTotals(sheet) {
@@ -205,13 +303,21 @@ function toTitleCase(str) {
     .join(" ");
 }
 
-function displayTable(data) {
-  const tableHead = document.querySelector("#excelTable thead");
-  const tableBody = document.querySelector("#excelTable tbody");
+function displayInventoryTable(data) {
+  const tableContainer = document.getElementById("tableContainer");
+  tableContainer.innerHTML = `
+    <table id="inventoryTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  `;
+  const tableHead = document.querySelector("#inventoryTable thead");
+  const tableBody = document.querySelector("#inventoryTable tbody");
   const periodText = `${data.period.start} al ${data.period.end}`;
-  const title = toTitleCase(data.name);
-  document.querySelector("#period").textContent = periodText;
+  const title = "Inventario | " + toTitleCase(data.name);
   document.querySelector("#title").textContent = data.name;
+  document.querySelector("#period").textContent = periodText;
+  document.querySelector("#tab").textContent = "Inventario";
   document.title = title;
 
   // Clear existing content
@@ -340,11 +446,11 @@ function displayTable(data) {
 
   // Add the totals row to the table footer
   tableFoot.appendChild(totalsRow);
-  document.querySelector("#excelTable").appendChild(tableFoot);
+  document.querySelector("#inventoryTable").appendChild(tableFoot);
 
   // Initialize DataTable
   const defaultPageLength = 10;
-  $("#excelTable").DataTable({
+  $("#inventoryTable").DataTable({
     order: [],
     responsive: true,
     pageLength: defaultPageLength,
@@ -386,12 +492,17 @@ function displayTable(data) {
               // Get table data
               const exportData = dt.buttons.exportData(config.exportOptions);
 
+              const title = document.title.split("|")[0].trim();
+              const company = document.title.split("|")[1].trim();
+
               // Create document definition
               const docDefinition = {
                 pageSize: "LEGAL",
                 pageOrientation: "landscape",
                 content: [
-                  { text: `${title} - ${periodText}`, style: "header" },
+                  { text: company, style: "header" },
+                  { text: title, style: "subtitle" },
+                  { text: periodText, style: "subHeaderRow" },
                   {
                     margin: [0, 10, 0, 10],
                     stack: [
@@ -496,6 +607,18 @@ function displayTable(data) {
                     margin: [0, 0, 0, 10],
                     alignment: "center",
                   },
+                  subtitle: {
+                    fontSize: 12,
+                    bold: true,
+                    margin: [0, 0, 0, 10],
+                    alignment: "center",
+                  },
+                  subHeaderRow: {
+                    fontSize: 10,
+                    bold: true,
+                    margin: [0, 0, 0, 10],
+                    alignment: "center",
+                  },
                   tableHeader: {
                     fontSize: 10,
                     bold: true,
@@ -554,4 +677,239 @@ function displayTable(data) {
   });
 }
 
-export { loadExcel };
+function displayCatalogTable(data) {
+  document.querySelector("#tab").textContent = "Catálogo de Productos";
+
+  // Get the current title
+  const currentTitle = document.title;
+  // Check if it contains a pipe
+  if (currentTitle.includes("|")) {
+    // Keep the part after the pipe
+    const company = currentTitle.split("|")[1].trim();
+    document.title = `Catálogo de Productos | ${company}`;
+  } else {
+    // If there's no pipe, just set a new title
+    document.title = "Catálogo de Productos";
+  }
+
+  const tableContainer = document.getElementById("tableContainer");
+
+  // Clear existing content
+  tableContainer.innerHTML = `
+    <table id="catalogTable" class="display">
+      <thead>
+        <tr></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  `;
+
+  const tableHead = document.querySelector("#catalogTable thead tr");
+  const tableBody = document.querySelector("#catalogTable tbody");
+
+  // Add headers
+  [
+    "Código",
+    "Nombre",
+    "Precio",
+    "Fracción",
+    "Descripción",
+    "Fracción",
+    "Observaciones",
+  ].forEach((text) => {
+    const th = document.createElement("th");
+    th.textContent = text;
+    tableHead.appendChild(th);
+  });
+
+  // Add data rows
+  data.items.forEach((item) => {
+    const tr = document.createElement("tr");
+
+    [
+      item.codigo,
+      item.nombre,
+      item.precio,
+      item.fraccion,
+      item.descripcion,
+      item.fraccion2,
+      item.observaciones,
+    ].forEach((cell, index) => {
+      const td = document.createElement("td");
+
+      // Format price as currency
+      if (index === 2) {
+        td.textContent = formatNumber(Number(cell));
+        td.classList.add("number-cell");
+      } else {
+        td.textContent = cell;
+      }
+
+      tr.appendChild(td);
+    });
+
+    tableBody.appendChild(tr);
+  });
+
+  // Initialize DataTable
+  $("#catalogTable").DataTable({
+    order: [],
+    responsive: true,
+    pageLength: 15,
+    lengthMenu: [
+      [10, 15, 25, 50, 100, -1],
+      [10, 15, 25, 50, 100, "Todos"],
+    ],
+    language: {
+      ...languageES,
+      lengthMenu: "_MENU_ por página",
+      searchPlaceholder: "Buscar...",
+    },
+    buttons: [
+      {
+        extend: "pdfHtml5",
+        text: '<i class="fa fa-file-pdf-o"></i> Exportar PDF',
+        titleAttr: "Exportar a PDF",
+        className: "btn-export btn-pdf",
+        exportOptions: {
+          columns: ":visible",
+        },
+        orientation: "landscape",
+        pageSize: "LETTER",
+        title: `Catálogo de Productos`,
+        action: function (e, dt, button, config) {
+          // Show loading
+          const loadingAlert = Swal.fire({
+            title: "Generando PDF...",
+            text: "Por favor espere...",
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
+
+          const pdfTitle = "Catálogo de Productos";
+          const company = document.title.split("|")[1].trim();
+
+          // Use a timeout to ensure the alert shows up
+          setTimeout(() => {
+            try {
+              // Get table data
+              const exportData = dt.buttons.exportData(config.exportOptions);
+
+              // Create document definition
+              const docDefinition = {
+                pageSize: "LEGAL",
+                pageOrientation: "landscape",
+                content: [
+                  { text: company, style: "header" },
+                  { text: pdfTitle, style: "subtitle" },
+                  {
+                    margin: [0, 10, 0, 10],
+                    stack: [
+                      {
+                        columns: [
+                          {
+                            text: `RFC: ${
+                              document.getElementById("rfc")?.textContent || ""
+                            }`,
+                            fontSize: 10,
+                            width: "50%",
+                          },
+                          {
+                            text: `IMMEX: ${
+                              document.getElementById("immex")?.textContent ||
+                              ""
+                            }`,
+                            fontSize: 10,
+                            width: "50%",
+                          },
+                        ],
+                      },
+                      {
+                        text: `Domicilio fiscal: ${
+                          document.getElementById("financialAddr")
+                            ?.textContent || ""
+                        }`,
+                        fontSize: 10,
+                        margin: [0, 5, 0, 0],
+                      },
+                    ],
+                  },
+                  {
+                    table: {
+                      headerRows: 1,
+                      widths: Array(exportData.header.length).fill("auto"),
+                      body: [exportData.header, ...exportData.body],
+                    },
+                    layout: {
+                      hLineWidth: () => 0.5,
+                      vLineWidth: () => 0.5,
+                      hLineColor: () => "#aaa",
+                      vLineColor: () => "#aaa",
+                      fillColor: (i) => (i % 2 === 0 ? "#f8f8f8" : null),
+                    },
+                  },
+                ],
+                styles: {
+                  header: {
+                    fontSize: 14,
+                    bold: true,
+                    margin: [0, 0, 0, 10],
+                    alignment: "center",
+                  },
+                  subtitle: {
+                    fontSize: 12,
+                    bold: true,
+                    margin: [0, 0, 0, 10],
+                    alignment: "center",
+                  },
+                  tableHeader: {
+                    fontSize: 10,
+                    bold: true,
+                    alignment: "center",
+                  },
+                  errorTable: {
+                    fontSize: 9,
+                    margin: [0, 5, 0, 15],
+                  },
+                },
+                defaultStyle: {
+                  fontSize: 9,
+                },
+              };
+
+              // Generate PDF
+              pdfMake
+                .createPdf(docDefinition)
+                .download(`${pdfTitle} - ${formatDate(new Date())}.pdf`);
+
+              // Show success after a delay
+              setTimeout(() => {
+                Swal.fire({
+                  title: "PDF Generado",
+                  text: "El documento ha sido generado exitosamente",
+                  icon: "success",
+                  timer: 2000,
+                  timerProgressBar: true,
+                });
+              }, 500);
+            } catch (error) {
+              console.error("Error generating PDF:", error);
+              Swal.fire({
+                title: "Error",
+                text: "No se pudo generar el PDF",
+                icon: "error",
+              });
+            }
+          }, 300);
+        },
+      },
+    ],
+    dom: '<"datatable-header"<"left"l><"center"B><"right"f>>rt<"datatable-footer"<"pagination-wrapper"<"pagination-info"i><"pagination-controls"p>>>',
+    fixedHeader: true,
+    autoWidth: false,
+  });
+}
+
+export { loadInventory, loadCatalog };

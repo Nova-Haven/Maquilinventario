@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (user) {
-      const { loadExcel } = await import("./js/excel.min.js");
+      const { loadInventory, loadCatalog } = await import("./js/excel.min.js");
       loginFormEl = document.getElementById("loginForm");
 
       if (loginFormEl) {
@@ -46,7 +46,38 @@ document.addEventListener("DOMContentLoaded", function () {
         if (addrElement && import.meta.env.VITE_FINANCIAL_ADDR) {
           addrElement.textContent = import.meta.env.VITE_FINANCIAL_ADDR;
         }
-        loadExcel();
+        // Load Excel file by defauld
+        loadInventory();
+
+        // Setup tab navigation
+        const inventoryTab = document.getElementById("inventoryTab");
+        const catalogTab = document.getElementById("catalogTab");
+        const container = document.querySelector(".excel-container");
+
+        inventoryTab.addEventListener("click", () => {
+          inventoryTab.classList.add("active");
+          catalogTab.classList.remove("active");
+          container.classList.remove("catalog-view");
+
+          // Clear tables before loading new data
+          document.getElementById("tableContainer").innerHTML = "";
+
+          // Reset loading message state
+          const loadingMessage = document.getElementById("loadingMessage");
+          if (loadingMessage) {
+            loadingMessage.innerHTML = "";
+            loadingMessage.style.display = "none";
+          }
+
+          loadInventory();
+        });
+
+        catalogTab.addEventListener("click", () => {
+          catalogTab.classList.add("active");
+          inventoryTab.classList.remove("active");
+          container.classList.add("catalog-view");
+          loadCatalog();
+        });
       } catch (error) {
         console.error("Error loading content:", error);
         contentEl.innerHTML = "Error loading content";

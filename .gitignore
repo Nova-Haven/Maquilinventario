@@ -69,5 +69,7 @@ node_modules/
 *.njsproj
 *.sln
 *.sw?
-*.xlsx
+
+# Files handled on runtime
+*.xls*
 .temp

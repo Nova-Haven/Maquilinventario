@@ -1,38 +1,86 @@
-import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { join } from "path";
+const { writeFileSync, existsSync, mkdirSync } = require("fs");
+const { createHash } = require("crypto");
 
-// Create necessary directories
-const outputDir = join("public", "assets");
-if (!existsSync(outputDir)) {
-  mkdirSync(outputDir, { recursive: true });
+// Helper function to ensure directories exist
+function ensureDirectories() {
+  if (!existsSync("./public")) mkdirSync("./public", { recursive: true });
+  if (!existsSync("./public/assets"))
+    mkdirSync("./public/assets", { recursive: true });
 }
 
-// Get all chunks from secrets
-const chunks = [
-  process.env.EXCEL_FILE_CHUNK_1,
-  process.env.EXCEL_FILE_CHUNK_2,
-  process.env.EXCEL_FILE_CHUNK_3,
-  process.env.EXCEL_FILE_CHUNK_4,
-  process.env.EXCEL_FILE_CHUNK_5,
-  process.env.EXCEL_FILE_CHUNK_6,
-].filter(Boolean);
-
-if (chunks.length !== 6) {
-  throw new Error("Missing one or more chunks");
+// Process command line args to determine file type
+let fileType = "inventory"; // default
+const args = process.argv.slice(2);
+if (args.includes("--type") && args.indexOf("--type") + 1 < args.length) {
+  fileType = args[args.indexOf("--type") + 1];
 }
 
-// Combine and decode chunks
-const binaryChunks = chunks.map((chunk) => Buffer.from(chunk, "base64"));
-const decoded = Buffer.concat(binaryChunks);
+// Set appropriate variables based on file type
+const filePrefix = fileType === "catalog" ? "CATALOG_FILE" : "INVENTORY_FILE";
+const envFilename =
+  fileType === "catalog" ? "VITE_CATALOG_FILE" : "VITE_INVENTORY_FILE";
 
-// Write output file
-const outputFile = join(outputDir, process.env.VITE_EXCEL_FILE);
-writeFileSync(outputFile, decoded);
+// Ensure required env variables are set
+const filename = process.env[envFilename];
+if (!filename) {
+  console.error(
+    JSON.stringify({
+      error: `Missing environment variable: ${envFilename}`,
+      success: false,
+    })
+  );
+  process.exit(1);
+}
 
-// Output JSON formatted result
-console.log(
-  JSON.stringify({
-    size: decoded.length,
-    path: outputFile,
-  })
-);
+try {
+  ensureDirectories();
+
+  // Collect the base64 encoded chunks from environment variables
+  const base64Chunks = [];
+  for (let i = 1; i <= 6; i++) {
+    const chunkEnvVar = `${filePrefix}_CHUNK_${i}`;
+    const chunk = process.env[chunkEnvVar];
+
+    if (!chunk) {
+      console.error(
+        JSON.stringify({
+          error: `Missing chunk: ${chunkEnvVar}`,
+          success: false,
+        })
+      );
+      process.exit(1);
+    }
+
+    base64Chunks.push(chunk);
+  }
+
+  // Decode and combine all the chunks
+  const buffers = base64Chunks.map((chunk) => Buffer.from(chunk, "base64"));
+  const combinedBuffer = Buffer.concat(buffers);
+
+  // Generate a checksum for validation
+  const hash = createHash("sha256").update(combinedBuffer).digest("hex");
+
+  // Write the complete file
+  const outputPath = `./public/assets/${filename}`;
+  writeFileSync(outputPath, combinedBuffer);
+
+  // Output the results as JSON for the GitHub Action to parse
+  console.log(
+    JSON.stringify({
+      success: true,
+      size: combinedBuffer.length,
+      hash: hash,
+      path: outputPath,
+      type: fileType,
+    })
+  );
+} catch (error) {
+  console.error(
+    JSON.stringify({
+      error: error.message,
+      success: false,
+    })
+  );
+  process.exit(1);
+}

@@ -1,11 +1,13 @@
 # Maquilinventario
 
-A web application that displays inventory data from an exported from a specific accounting software resulting in a specially formatted Excel file, secured behind Firebase Authentication.
+A web application that displays inventory and product catalog data from exports of a specific accounting software, resulting in specially formatted Excel files, secured behind Firebase Authentication.
 
 ## Features
 
 - 🔒 Secure authentication with Firebase
-- 📊 Excel file visualization
+- 📊 Excel file visualization for inventory and product catalog
+- 🔄 Toggle between inventory and catalog views
+- 💾 PDF export capabilities for both data types
 - 🚀 Vite-powered development
 - 🔥 Firebase hosting integration
 - 🤖 GitHub Actions automation
@@ -16,7 +18,7 @@ A web application that displays inventory data from an exported from a specific 
 - Firebase CLI (`npm install -g firebase-tools`)
 - Bun (recommended) or npm/yarn
 - Firebase project
-- Excel file in the required format
+- Excel files in the required format (inventory and catalog)
 
 ## Quick Start
 
@@ -44,7 +46,8 @@ VITE_FIREBASE_PROJECT_ID=your_project_id
 VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
 VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
-VITE_EXCEL_FILE=your_excel_filename.xlsx
+VITE_INVENTORY_FILE=your_excel_inventory_filename.xlsx
+VITE_CATALOG_FILE=your_excel_catalog_filename.xls
 VITE_RFC=company_rfc
 VITE_IMMEX=company_immex
 VITE_FINANCIAL_ADDR='company address'
@@ -55,6 +58,8 @@ VITE_FINANCIAL_ADDR='company address'
 1. Place your Excel file in the `public/assets` directory
 2. Ensure it follows the required format:
 
+#### Inventory Excel Format
+
 ```plaintext
 Column structure:
 - Column B: Item Code
@@ -62,6 +67,21 @@ Column structure:
 - Column D: Cost Method
 - Column E: (Intentionally empty)
 ... (see src/js/excel.js for full specification)
+```
+
+#### Product Catalog Excel Format
+
+```plaintext
+Format:
+- Headers in row 3
+- Data starts from row 4
+- Column A: Product Code
+- Column B: Product Name
+- Column C: Price
+- Column D: Fraction
+- Column E: Description
+- Column F: Fraction (alternate)
+- Column G: Observations
 ```
 
 ### 3. Development Environment
@@ -110,6 +130,7 @@ yarn dev
 - Open http://localhost:5173
 - Log in with your test credentials
 - Verify the Excel data is displayed correctly
+- Use the navigation tabs to toggle between Inventory and Catalog views
 
 ### 4. Building for Production
 
@@ -140,12 +161,11 @@ The built files will be in the `dist` directory, ready for deployment to any sta
 maquilinventario/
 ├── .github/workflows/    # GitHub Actions workflows
 ├── public/              # Static assets
-│   └── data/           # Excel files
+│   └── assets/          # Excel files
 ├── scripts/            # Utility scripts
 ├── src/                # Source code
 │   ├── js/            # JavaScript modules
-│   │   └── excel.js   # Excel parsing logic
-│   └── components/    # UI components
+│   │   └── excel.js   # Excel parsing and display logic
 ├── .env.example        # Environment template
 └── firebase.json       # Firebase configuration
 ```
@@ -158,14 +178,15 @@ maquilinventario/
 
 - A GitHub repository for your project
 - Firebase project already set up
-- Excel file ready to be used
+- Excel files ready to be used
 
 #### 1. Set up GitHub Repository Secrets
 
 Go to your repository's **Settings** > **Secrets and variables** > **Actions** and add the following secrets:
 
 ```plaintext
-VITE_EXCEL_FILE=your_excel_filename.xlsx
+VITE_INVENTORY_FILE=your_excel_inventory_filename.xlsx
+VITE_CATALOG_FILE=your_excel_catalog_filename.xls
 VITE_FIREBASE_API_KEY=your_api_key
 VITE_FIREBASE_APP_ID=your_app_id
 VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
@@ -199,7 +220,8 @@ VITE_FINANCIAL_ADDR='company address'
 GITHUB_TOKEN=your_copied_token
 GITHUB_OWNER=your_github_username
 GITHUB_REPO=your_repo_name
-VITE_EXCEL_FILE=your_excel_filename.xlsx
+VITE_INVENTORY_FILE=your_excel_inventory_filename.xlsx
+VITE_CATALOG_FILE=your_excel_catalog_filename.xls
 ```
 
 #### 4. Set up Firebase GitHub Integration
@@ -242,13 +264,32 @@ firebase init hosting:github
 bun run split-excel  # or npm/yarn
 ```
 
-2. Verify the chunks:
+2. Check your repository's Actions tab to ensure workflows are running correctly
 
-```bash
-node scripts/testChunks.min.js
-```
+## Using the Application
 
-3. Check your repository's Actions tab to ensure workflows are running correctly
+### Navigation
+
+- Use the tabs at the top of the page to toggle between Inventory and Catalog views
+- Each view provides specific functionality for that data type
+
+### Inventory View
+
+- Displays complete inventory data with units and amounts
+- Shows error codes with tooltip explanations
+- Includes totals row at the bottom
+
+### Catalog View
+
+- Shows product catalog information
+- Displays prices, fractions, and product details
+- Formatted for easy reference
+
+### PDF Export
+
+- Both views support PDF export functionality
+- Click the "Exportar PDF" button to generate a downloadable PDF
+- PDFs are formatted with proper headers and company information
 
 #### Advanced Configuration
 

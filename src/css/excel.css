@@ -1,29 +1,17 @@
+#tab {
+  color: #666;
+  text-align: center;
+  font-size: 20px;
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
 #period {
   color: #666;
   text-align: center;
   font-size: 18px;
   margin-top: 0;
   margin-bottom: 20px;
-}
-
-#excelTable {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin: 1rem 0;
-}
-
-#excelTable tfoot {
-  position: sticky;
-  bottom: 0;
-  background: #4f82b1;
-  border-top: 2px solid #000000;
-  font-weight: 700;
-}
-
-#excelTable tfoot td {
-  border-top: 2px solid #000000;
 }
 
 .excel-container {
@@ -73,8 +61,33 @@
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
 }
 
-#excelTable td,
-#excelTable th {
+#inventoryTable,
+#catalogTable {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1rem 0;
+}
+
+#inventoryTable tfoot,
+#catalogTable tfoot {
+  position: sticky;
+  bottom: 0;
+  background: #4f82b1;
+  border-top: 2px solid #000000;
+  font-weight: 700;
+}
+
+#inventoryTable tfoot td,
+#inventoryTable tfoot td {
+  border-top: 2px solid #000000;
+}
+
+#inventoryTable td,
+#inventoryTable th,
+#catalogTable td,
+#catalogTable th {
   border: 1px solid #000000;
   padding: 12px 8px;
   white-space: normal;
@@ -83,7 +96,8 @@
   min-width: 80px;
 }
 
-#excelTable thead th {
+#inventoryTable thead th,
+#catalogTable thead th {
   background-color: #4f82b1;
   border-bottom: 2px solid#4f82b1;
   font-weight: 600;
@@ -221,4 +235,46 @@
   color: #333;
   font-size: 24px;
   margin-bottom: 5px;
+}
+
+.nav-tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+  margin-right: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.tab-btn:hover {
+  background-color: #e5e5e5;
+}
+
+.tab-btn.active {
+  background-color: #4f82b1;
+  color: white;
+  border-color: #4f82b1;
+}
+
+#period {
+  display: block;
+}
+
+.catalog-view #period {
+  display: none;
+}
+
+#catalogTable,
+#inventoryTable {
+  width: 100%;
+  margin-top: 20px;
 }
