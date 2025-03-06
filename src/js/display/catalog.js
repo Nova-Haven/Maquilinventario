@@ -35,10 +35,10 @@ export function displayCatalogTable(data) {
     "Código",
     "Nombre",
     "Precio",
-    "Fracción",
+    "Fracción Arancelaria",
     "Descripción",
-    "Fracción",
-    "Observaciones",
+    "Unidad Base",
+    "Clave Pedimento",
   ].forEach((text) => {
     const th = document.createElement("th");
     th.textContent = text;
@@ -53,18 +53,21 @@ export function displayCatalogTable(data) {
       item.codigo,
       item.nombre,
       item.precio,
-      item.fraccion,
+      item.fraccion_arancelaria,
       item.descripcion,
-      item.fraccion2,
-      item.observaciones,
+      item.unidad_base,
+      item.clave_pedimento,
     ].forEach((cell, index) => {
       const td = document.createElement("td");
 
       // Format price as currency
       if (index === 2) {
-        td.textContent = formatNumber(Number(cell));
+        td.textContent = `$${formatNumber(Number(cell))}`;
         td.classList.add("number-cell");
       } else {
+        if (index === 3 || index === 5 || index === 6) {
+          td.style.textAlign = "center";
+        }
         td.textContent = cell;
       }
 

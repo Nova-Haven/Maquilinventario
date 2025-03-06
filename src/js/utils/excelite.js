@@ -51,16 +51,16 @@ function extractCatalogData(sheet) {
 
   // Extract data starting from row 4 (index 3)
   const catalogItems = data
-    .slice(3)
+    .slice(1) // Skip the first row (headers)
     .filter((row) => row.length > 0 && row[0]) // Filter out empty rows
     .map((row) => ({
       codigo: row[0] || "",
       nombre: row[1] || "",
       precio: row[2] || 0,
-      fraccion: row[3] || "",
+      fraccion_arancelaria: row[3] || "",
       descripcion: row[4] || "",
-      fraccion2: row[5] || "",
-      observaciones: row[6] || "",
+      unidad_base: row[5] || "",
+      clave_pedimento: row[6] || "",
     }));
 
   return {

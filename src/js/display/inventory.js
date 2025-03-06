@@ -90,6 +90,9 @@ export function displayInventoryTable(data) {
       if (index === 2 || index === 3 || index === 12) {
         td.style.textAlign = "center";
       }
+      if (index >= 8 && index <= 11) {
+        td.textContent = `$${formatNumber(Number(cell))}`;
+      }
 
       tr.appendChild(td);
     });
@@ -121,6 +124,9 @@ export function displayInventoryTable(data) {
     if (index >= 4 && index !== 12) {
       td.textContent = formatNumber(Number(cell));
       td.classList.add("number-cell");
+    }
+    if (index >= 8 && index <= 11) {
+      td.textContent = `$${formatNumber(Number(cell))}`;
     }
 
     totalsRow.appendChild(td);
