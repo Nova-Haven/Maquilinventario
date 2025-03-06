@@ -46,6 +46,8 @@ jobs:
           INVENTORY_FILE_CHUNK_4: ${{ secrets.INVENTORY_FILE_CHUNK_4 }}
           INVENTORY_FILE_CHUNK_5: ${{ secrets.INVENTORY_FILE_CHUNK_5 }}
           INVENTORY_FILE_CHUNK_6: ${{ secrets.INVENTORY_FILE_CHUNK_6 }}
+          INVENTORY_FILE_CHUNK_7: ${{ secrets.INVENTORY_FILE_CHUNK_7 }}
+          INVENTORY_FILE_CHUNK_8: ${{ secrets.INVENTORY_FILE_CHUNK_8 }}
           VITE_INVENTORY_FILE: ${{ secrets.VITE_INVENTORY_FILE }}
 
       - name: Combine catalog Excel chunks
@@ -66,6 +68,8 @@ jobs:
           CATALOG_FILE_CHUNK_4: ${{ secrets.CATALOG_FILE_CHUNK_4 }}
           CATALOG_FILE_CHUNK_5: ${{ secrets.CATALOG_FILE_CHUNK_5 }}
           CATALOG_FILE_CHUNK_6: ${{ secrets.CATALOG_FILE_CHUNK_6 }}
+          CATALOG_FILE_CHUNK_7: ${{ secrets.CATALOG_FILE_CHUNK_7 }}
+          CATALOG_FILE_CHUNK_8: ${{ secrets.CATALOG_FILE_CHUNK_8 }}
           VITE_CATALOG_FILE: ${{ secrets.VITE_CATALOG_FILE }}
 
       - name: Calculate version
