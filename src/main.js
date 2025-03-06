@@ -1,4 +1,5 @@
 import { auth } from "./js/fb.min";
+import { TABS_ENABLED, TABS, DEFAULT_TAB } from "./js/config.min.js";
 import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import "./style.min.css";
 import "./css/excel.min.css";
@@ -45,38 +46,118 @@ document.addEventListener("DOMContentLoaded", function () {
         if (addrElement && import.meta.env.VITE_FINANCIAL_ADDR) {
           addrElement.textContent = import.meta.env.VITE_FINANCIAL_ADDR;
         }
-        // Load Excel file by defauld
+        // Load Excel file by default
         loadInventory();
 
-        // Setup tab navigation
-        const inventoryTab = document.getElementById("inventoryTab");
-        const catalogTab = document.getElementById("catalogTab");
-        const container = document.querySelector(".excel-container");
+        // Setup tab navigation only if it's enabled
+        if (TABS_ENABLED) {
+          const container = document.querySelector("#tableContainer");
+          const tabButtonsContainer = document.getElementById("tabButtons");
 
-        inventoryTab.addEventListener("click", () => {
-          inventoryTab.classList.add("active");
-          catalogTab.classList.remove("active");
-          container.classList.remove("catalog-view");
-
-          // Clear tables before loading new data
-          document.getElementById("tableContainer").innerHTML = "";
-
-          // Reset loading message state
-          const loadingMessage = document.getElementById("loadingMessage");
-          if (loadingMessage) {
-            loadingMessage.innerHTML = "";
-            loadingMessage.style.display = "none";
+          // Function to create a tab button
+          function createTabButton(tabId) {
+            const button = document.createElement("button");
+            button.id = tabId;
+            button.className = "tab-btn";
+            button.textContent = TABS[tabId].label;
+            button.dataset.tab = tabId;
+            return button;
           }
 
-          loadInventory();
-        });
+          // Add tab buttons based on the config
+          for (const tabId in TABS) {
+            if (!TABS[tabId].enabled) continue;
+            const button = createTabButton(tabId);
+            tabButtonsContainer.appendChild(button);
+          }
 
-        catalogTab.addEventListener("click", () => {
-          catalogTab.classList.add("active");
-          inventoryTab.classList.remove("active");
-          container.classList.add("catalog-view");
-          loadCatalog();
-        });
+          // Set active tab based on DEFAULT_TAB
+          const defaultTabButton = document.getElementById(DEFAULT_TAB);
+          if (defaultTabButton) {
+            defaultTabButton.classList.add("active");
+
+            // Apply initial CSS classes for default tab
+            const defaultConfig = TABS[DEFAULT_TAB];
+            if (defaultConfig.cssClass) {
+              container.classList.add(defaultConfig.cssClass);
+            }
+          }
+
+          tabButtonsContainer.addEventListener("click", async (event) => {
+            const target = event.target;
+            if (!target.classList.contains("tab-btn")) return;
+
+            const clickedTabId = target.id;
+            const tabConfig = TABS[clickedTabId];
+
+            if (!tabConfig) {
+              console.warn(`No configuration found for tab: ${clickedTabId}`);
+              return;
+            }
+
+            // Remove active class from all tabs
+            document.querySelectorAll(".tab-btn").forEach((btn) => {
+              btn.classList.remove("active");
+            });
+
+            // Add active class to clicked tab
+            target.classList.add("active");
+
+            // Apply CSS classes
+            // First remove all possible tab classes to avoid conflicts
+            for (const id in TABS) {
+              if (TABS[id].cssClass) {
+                container.classList.remove(TABS[id].cssClass);
+              }
+              (TABS[id].removeClasses || []).forEach((cls) => {
+                container.classList.remove(cls);
+              });
+            }
+
+            // Then apply the new tab's classes
+            if (tabConfig.cssClass) {
+              container.classList.add(tabConfig.cssClass);
+            }
+
+            // Clear tables before loading new data
+            document.getElementById("tableContainer").innerHTML = "";
+
+            // Reset loading message state
+            const loadingMessage = document.getElementById("loadingMessage");
+            if (loadingMessage) {
+              loadingMessage.innerHTML = "";
+              loadingMessage.style.display = "none";
+            }
+
+            // Call the appropriate handler
+            if (tabConfig.handler) {
+              try {
+                // Create a handlers object that maps names to functions
+                const handlers = {
+                  loadInventory,
+                  loadCatalog,
+                };
+
+                // Check if the handler exists
+                if (typeof handlers[tabConfig.handler] === "function") {
+                  await handlers[tabConfig.handler]();
+                } else {
+                  console.warn(
+                    `Handler '${tabConfig.handler}' is not a function`
+                  );
+                }
+              } catch (error) {
+                console.error(`Error loading tab ${clickedTabId}:`, error);
+                const errorMessage = document.createElement("div");
+                errorMessage.className = "error-message";
+                errorMessage.textContent = "Error loading content";
+                container.appendChild(errorMessage);
+              }
+            } else {
+              console.warn(`No handler found for tab: ${clickedTabId}`);
+            }
+          });
+        }
       } catch (error) {
         console.error("Error loading content:", error);
         contentEl.innerHTML = "Error loading content";
