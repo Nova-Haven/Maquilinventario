@@ -27,7 +27,7 @@ const octokit = new Octokit({
 });
 
 // Configuration
-export const NUM_CHUNKS = 8; // Per file
+import { NUM_CHUNKS } from "./config.js";
 const TEMP_DIR = "./.temp";
 
 async function processFile(filePath, secretPrefix) {

@@ -1,5 +1,5 @@
 import { writeFileSync, existsSync, mkdirSync } from "fs";
-import { NUM_CHUNKS } from "./splitExcel";
+import { NUM_CHUNKS } from "./config.js";
 import { createHash } from "crypto";
 
 // Helper function to ensure directories exist
