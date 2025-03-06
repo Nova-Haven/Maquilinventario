@@ -27,7 +27,7 @@ const octokit = new Octokit({
 });
 
 // Configuration
-const NUM_CHUNKS = 6; // Per file
+export const NUM_CHUNKS = 8; // Per file
 const TEMP_DIR = "./.temp";
 
 async function processFile(filePath, secretPrefix) {
@@ -280,7 +280,7 @@ function testChunks() {
     // Process inventory file
     console.log("\n📊 Processing inventory file...");
     const inventoryChunks = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < NUM_CHUNKS; i++) {
       const chunkPath = `./.temp/INVENTORY_FILE_chunk_${i}`;
       if (existsSync(chunkPath)) {
         const data = readFileSync(chunkPath);
@@ -323,7 +323,7 @@ function testChunks() {
     // Process catalog file
     console.log("\n📚 Processing catalog file...");
     const catalogChunks = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < NUM_CHUNKS; i++) {
       const chunkPath = `./.temp/CATALOG_FILE_chunk_${i}`;
       if (existsSync(chunkPath)) {
         const data = readFileSync(chunkPath);

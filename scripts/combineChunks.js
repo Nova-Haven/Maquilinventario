@@ -1,4 +1,5 @@
 import { writeFileSync, existsSync, mkdirSync } from "fs";
+import { NUM_CHUNKS } from "./splitExcel";
 import { createHash } from "crypto";
 
 // Helper function to ensure directories exist
@@ -37,7 +38,7 @@ try {
 
   // Collect the base64 encoded chunks from environment variables
   const base64Chunks = [];
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= NUM_CHUNKS; i++) {
     const chunkEnvVar = `${filePrefix}_CHUNK_${i}`;
     const chunk = process.env[chunkEnvVar];
 

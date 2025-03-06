@@ -172,7 +172,7 @@ maquilinventario/
 
 ### Auto-build in GitHub Actions Setup
 
-> **Note**: This setup handles Excel files up to 192 KB. For larger files, see the [Advanced Configuration](#advanced-configuration) section.
+> **Note**: This setup handles Excel files up to 256 KB. For larger files, see the [Advanced Configuration](#advanced-configuration) section.
 
 #### Prerequisites
 
@@ -293,7 +293,7 @@ bun run split-excel  # or npm/yarn
 
 #### Advanced Configuration
 
-To handle Excel files larger than 192 KB:
+To handle Excel files larger than 256 KB:
 
 1. Modify `scripts/splitExcel.js`:
 
