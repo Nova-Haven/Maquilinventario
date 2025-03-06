@@ -19,44 +19,28 @@ function extractName(sheet) {
 function extractInventoryData(sheet) {
   const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-  // Find where the main data ends (where notes begin)
-  const notesStartIndex = data.findIndex(
-    (row, index) => index > 8 && row[1] && row[1].toString().startsWith("(1)")
-  );
-
   // Extract only the main data rows
-  const mainData = data
-    .slice(7, notesStartIndex)
-    .map((row) => ({
-      producto: row[1],
-      nombre: row[2],
-      metodo_costeo: row[3]?.replace(/^Costo\s+/i, "") || "",
-      unidades: {
-        inventario_inicial: row[5],
-        entradas: row[6],
-        salidas: row[7],
-        existencia: row[8],
-      },
-      importes: {
-        inventario_inicial: row[9],
-        entradas: row[10],
-        salidas: row[11],
-        inventario_final: row[12],
-      },
-      error: row[13],
-    }))
-    .filter((row) => row.producto);
+  const mainData = data.slice(7).map((row) => ({
+    producto: row[1],
+    nombre: row[2],
+    metodo_costeo: row[3]?.replace(/^Costo\s+/i, "") || "",
+    clave_pedimento: row[4],
+    unidades: {
+      inventario_inicial: row[5],
+      entradas: row[6],
+      salidas: row[7],
+      existencia: row[8],
+    },
+    importes: {
+      inventario_inicial: row[9],
+      entradas: row[10],
+      salidas: row[11],
+      inventario_final: row[12],
+    },
+    fraccion_arancelaria: row[13],
+  }));
 
-  // Extract notes separately
-  const notes = data
-    .slice(notesStartIndex)
-    .filter((row) => row[1])
-    .map((row) => row[1]);
-
-  return {
-    mainData,
-    notes,
-  };
+  return mainData;
 }
 
 function extractCatalogData(sheet) {
@@ -67,16 +51,16 @@ function extractCatalogData(sheet) {
 
   // Extract data starting from row 4 (index 3)
   const catalogItems = data
-    .slice(3)
+    .slice(1) // Skip the first row (headers)
     .filter((row) => row.length > 0 && row[0]) // Filter out empty rows
     .map((row) => ({
       codigo: row[0] || "",
       nombre: row[1] || "",
       precio: row[2] || 0,
-      fraccion: row[3] || "",
+      fraccion_arancelaria: row[3] || "",
       descripcion: row[4] || "",
-      fraccion2: row[5] || "",
-      observaciones: row[6] || "",
+      unidad_base: row[5] || "",
+      clave_pedimento: row[6] || "",
     }));
 
   return {

@@ -46,9 +46,20 @@ export function initInventory(data, title, periodText) {
             try {
               // Get table data
               const exportData = dt.buttons.exportData(config.exportOptions);
-
               const title = document.title.split("|")[0].trim();
               const company = document.title.split("|")[1].trim();
+
+              const tableBody = exportData.body;
+              tableBody.pop(); // Remove totals row
+
+              const headers = exportData.header;
+
+              const totalsRowArray = [];
+              $("#inventoryTable tfoot tr:first")
+                .find("td, th")
+                .each(function () {
+                  totalsRowArray.push($(this).text());
+                });
 
               // Create document definition
               const docDefinition = {
@@ -93,8 +104,12 @@ export function initInventory(data, title, periodText) {
                   {
                     table: {
                       headerRows: 1,
-                      widths: Array(exportData.header.length).fill("auto"),
-                      body: [exportData.header, ...exportData.body],
+                      widths: Array(headers.length).fill("auto"),
+                      body: [
+                        headers, // Header row as array
+                        ...tableBody, // Data rows as arrays
+                        totalsRowArray, // Totals row as array
+                      ],
                     },
                     layout: {
                       hLineWidth: () => 0.5,
@@ -103,56 +118,6 @@ export function initInventory(data, title, periodText) {
                       vLineColor: () => "#aaa",
                       fillColor: (i) => (i % 2 === 0 ? "#f8f8f8" : null),
                     },
-                  },
-                  {
-                    text: "Leyenda de errores de existencia o costos:",
-                    style: "subheader",
-                    margin: [0, 15, 0, 5],
-                  },
-                  {
-                    table: {
-                      headerRows: 0,
-                      widths: ["3%", "97%"],
-                      body: data.data.notes.map((note) => {
-                        // Extract code and description from note text
-                        const match = note.match(/^\((\d+)\)\s*(.*)/);
-                        if (match) {
-                          return [
-                            { text: match[1], alignment: "center", bold: true },
-                            { text: match[2].trim() },
-                          ];
-                        }
-                        return [{ text: "", alignment: "center" }, note];
-                      }),
-                    },
-                    layout: {
-                      hLineWidth: function () {
-                        return 0;
-                      },
-                      vLineWidth: function () {
-                        return 0;
-                      },
-                      hLineColor: function () {
-                        return "#aaaaaa";
-                      },
-                      vLineColor: function () {
-                        return "#aaaaaa";
-                      },
-                      paddingLeft: function () {
-                        return 5;
-                      },
-                      paddingRight: function () {
-                        return 5;
-                      },
-                      paddingTop: function () {
-                        return 3;
-                      },
-                      paddingBottom: function () {
-                        return 3;
-                      },
-                    },
-                    style: "errorTable",
-                    margin: [0, 0, 0, 10],
                   },
                 ],
                 styles: {
@@ -178,10 +143,6 @@ export function initInventory(data, title, periodText) {
                     fontSize: 10,
                     bold: true,
                     alignment: "center",
-                  },
-                  errorTable: {
-                    fontSize: 9,
-                    margin: [0, 5, 0, 15],
                   },
                 },
                 defaultStyle: {
@@ -238,9 +199,9 @@ export function initInventory(data, title, periodText) {
     paging: true,
     autoWidth: false,
     columnDefs: [
-      { width: "25%", target: 1 },
+      { width: "15%", target: 1 },
       { width: "6%", target: 2 },
-      { width: "3%", target: 11 },
+      { width: "7%", target: 3 },
     ],
   });
 }

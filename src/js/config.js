@@ -1,4 +1,4 @@
-export const TABS_ENABLED = false;
+export const TABS_ENABLED = true;
 export const DEFAULT_TAB = "inventory";
 export const TABS = {
   inventory: {
