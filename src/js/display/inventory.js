@@ -24,7 +24,7 @@ export function displayInventoryTable(data) {
   // Create column groups header
   const headerGroup = document.createElement("tr");
   [
-    { text: "", colspan: 3 },
+    { text: "", colspan: 4 },
     { text: "Unidades", colspan: 4 },
     { text: "Importes", colspan: 4 },
     { text: "", colspan: 1 },
@@ -43,29 +43,30 @@ export function displayInventoryTable(data) {
     "Producto",
     "Nombre",
     "M. Costeo",
-    "Inv. Inicial",
+    "Clave Pedimento",
+    "Inicial",
     "Entradas",
     "Salidas",
     "Existencia",
-    "Inv. Inicial",
+    "Inicial",
     "Entradas",
     "Salidas",
-    "Inv. Final",
-    "Err.",
+    "Final",
+    "Fracc. Arancelaria",
   ].forEach((text) => {
     const th = document.createElement("th");
     th.textContent = text;
     subHeaderRow.appendChild(th);
   });
   tableHead.appendChild(subHeaderRow);
-
   // Create body rows
-  data.data.mainData.forEach((row) => {
+  data.data.forEach((row) => {
     const tr = document.createElement("tr");
     [
       row.producto,
       row.nombre,
       row.metodo_costeo,
+      row.clave_pedimento,
       row.unidades.inventario_inicial,
       row.unidades.entradas,
       row.unidades.salidas,
@@ -74,37 +75,20 @@ export function displayInventoryTable(data) {
       row.importes.entradas,
       row.importes.salidas,
       row.importes.inventario_final,
-      row.error,
+      row.fraccion_arancelaria,
     ].forEach((cell, index) => {
       const td = document.createElement("td");
 
-      // Special handling for error column
-      if (index === 11) {
-        if (cell) {
-          td.textContent = cell; // Show the error number
-
-          // Find matching note
-          const note = data.data.notes.find((note) =>
-            note.startsWith(`(${cell})`)
-          );
-
-          if (note) {
-            td.classList.add("has-tooltip");
-            td.title = note; // Add tooltip with full note text
-          }
-        } else {
-          // Leave empty for error column when no error
-          td.textContent = "";
-        }
-      } else {
-        // Normal cell handling (for non-error columns)
-        td.textContent = cell !== undefined && cell !== null ? cell : "0";
-      }
+      // Normal cell handling (for non-error columns)
+      td.textContent = cell !== undefined && cell !== null ? cell : "0";
 
       // Add number-cell class for numeric columns (excluding error column)
-      if (index >= 3 && index <= 10) {
+      if (index >= 4 && index !== 12) {
         td.textContent = formatNumber(Number(cell));
         td.classList.add("number-cell");
+      }
+      if (index === 2 || index === 3 || index === 12) {
+        td.style.textAlign = "center";
       }
 
       tr.appendChild(td);
@@ -117,6 +101,7 @@ export function displayInventoryTable(data) {
   const tableFoot = document.createElement("tfoot");
   [
     "Totales",
+    "",
     "",
     "",
     data.totals.unidades.inventario_inicial,
@@ -133,7 +118,7 @@ export function displayInventoryTable(data) {
     td.textContent = cell !== undefined && cell !== null ? cell : "0";
 
     // Add number-cell class for numeric columns
-    if (index >= 3 && index <= 10) {
+    if (index >= 4 && index !== 12) {
       td.textContent = formatNumber(Number(cell));
       td.classList.add("number-cell");
     }
