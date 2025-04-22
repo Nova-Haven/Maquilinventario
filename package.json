@@ -10,7 +10,7 @@
     "split-excel": "node scripts/splitExcel.min.js"
   },
   "devDependencies": {
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.5.0",
     "firebase-tools": "^14.1.0",
     "libsodium-wrappers": "^0.7.15",
     "rollup-plugin-visualizer": "^5.14.0",
