@@ -44,7 +44,11 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (addrElement && import.meta.env.VITE_FINANCIAL_ADDR) {
-          addrElement.textContent = import.meta.env.VITE_FINANCIAL_ADDR;
+          const addrValue = import.meta.env.VITE_FINANCIAL_ADDR.replace(
+            /^'|'$/g,
+            ""
+          );
+          addrElement.textContent = addrValue;
         }
         // Load Excel file by default
         loadInventory();
