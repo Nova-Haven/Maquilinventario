@@ -23,7 +23,7 @@
     "datatables.net-buttons-dt": "^3.2.3",
     "datatables.net-dt": "^2.2.2",
     "datatables.net-plugins": "^2.2.2",
-    "firebase": "^11.6.1",
+    "firebase": "^11.7.3",
     "jquery": "^3.7.1"
   }
 }
