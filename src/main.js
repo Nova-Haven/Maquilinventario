@@ -4,6 +4,8 @@ import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import "./style.min.css";
 import "./css/excel.min.css";
 
+let userRole = null; // Variable to store the user's role
+
 document.addEventListener("DOMContentLoaded", function () {
   const loadingEl = document.getElementById("loading");
   const contentEl = document.getElementById("content");
@@ -16,7 +18,23 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (user) {
-      const { loadInventory, loadCatalog } = await import("./js/excel.min.js");
+      try {
+        const idTokenResult = await user.getIdTokenResult();
+        const claims = idTokenResult.claims;
+        if (claims && (claims.role === "admin" || claims.role === "upload")) {
+          userRole = claims.role;
+          console.log("User role:", userRole); // Optional: for debugging
+        } else {
+          userRole = "user"; // Default role if no specific admin/upload role is found
+        }
+      } catch (error) {
+        console.error("Error getting user claims:", error);
+        userRole = "user"; // Default to 'user' on error
+      }
+
+      const { loadInventory, loadCatalog, loadUpload } = await import(
+        "./js/excel.min.js"
+      );
       loginFormEl = document.getElementById("loginForm");
 
       if (loginFormEl) {
@@ -59,20 +77,31 @@ document.addEventListener("DOMContentLoaded", function () {
           const tabButtonsContainer = document.getElementById("tabButtons");
 
           // Function to create a tab button
-          function createTabButton(tabId) {
+          function createTabButton(tabId, tabConfig) {
+            // Modified to accept tabConfig
             const button = document.createElement("button");
             button.id = tabId;
             button.className = "tab-btn";
-            button.textContent = TABS[tabId].label;
+            button.textContent = tabConfig.label; // Use tabConfig.label
             button.dataset.tab = tabId;
             return button;
           }
 
           // Add tab buttons based on the config
           for (const tabId in TABS) {
-            if (!TABS[tabId].enabled) continue;
-            const button = createTabButton(tabId);
-            tabButtonsContainer.appendChild(button);
+            if (TABS[tabId].enabled) {
+              // Check if tab is generally enabled
+              if (tabId === "upload") {
+                // Special handling for upload tab
+                if (userRole === "admin" || userRole === "upload") {
+                  const button = createTabButton(tabId, TABS[tabId]);
+                  tabButtonsContainer.appendChild(button);
+                }
+              } else {
+                const button = createTabButton(tabId, TABS[tabId]);
+                tabButtonsContainer.appendChild(button);
+              }
+            }
           }
 
           // Set active tab based on DEFAULT_TAB
@@ -140,6 +169,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 const handlers = {
                   loadInventory,
                   loadCatalog,
+                  loadUpload,
                 };
 
                 // Check if the handler exists
@@ -167,6 +197,7 @@ document.addEventListener("DOMContentLoaded", function () {
         contentEl.innerHTML = "Error loading content";
       }
     } else {
+      userRole = null; // Clear role on sign-out
       contentEl.style.display = "none";
       loginFormEl = document.getElementById("loginForm");
 

@@ -15,4 +15,11 @@ export const TABS = {
     removeClasses: [],
     enabled: true,
   },
+  upload: {
+    label: "Subida de archivos",
+    handler: "loadUpload",
+    cssClass: "upload-view",
+    removeClasses: [],
+    enabled: true,
+  },
 };

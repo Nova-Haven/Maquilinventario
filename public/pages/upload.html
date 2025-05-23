@@ -1,0 +1,82 @@
+<div id="uploadFormContainer" style="padding: 20px">
+  <h2>Subir Archivos de Datos</h2>
+  <p>
+    Seleccione el archivo de inventario (.xlsx) y el archivo de catálogo (.xls)
+    correctos.
+  </p>
+  <div
+    id="uploadFeedback"
+    class="feedback-message"
+    style="
+      display: none;
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 5px;
+    "
+  ></div>
+
+  <div style="margin-bottom: 15px">
+    <label for="inventoryFile" style="display: block; margin-bottom: 5px"
+      >Archivo de Inventario (Esperado:
+      <strong>${expectedInventoryFile}</strong>)</label
+    >
+    <input
+      type="file"
+      id="inventoryFile"
+      accept=".xlsx"
+      style="
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 100%;
+        box-sizing: border-box;
+      "
+    />
+  </div>
+
+  <div style="margin-bottom: 20px">
+    <label for="catalogFile" style="display: block; margin-bottom: 5px"
+      >Archivo de Catálogo (Esperado:
+      <strong>${expectedCatalogFile}</strong>)</label
+    >
+    <input
+      type="file"
+      id="catalogFile"
+      accept=".xls"
+      style="
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 100%;
+        box-sizing: border-box;
+      "
+    />
+  </div>
+
+  <button
+    id="submitUploadButton"
+    class="btn"
+    style="
+      padding: 10px 15px;
+      background-color: #4f82b1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    "
+  >
+    Subir Archivos Seleccionados
+  </button>
+  <div
+    id="uploadLoadingMessage"
+    style="display: none; margin-top: 15px; text-align: center"
+  >
+    <img
+      src="/assets/loading.gif"
+      alt="Subiendo..."
+      width="24"
+      style="vertical-align: middle; margin-right: 8px"
+    />
+    Subiendo archivos...
+  </div>
+</div>
