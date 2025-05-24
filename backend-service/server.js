@@ -78,8 +78,7 @@ try {
 } catch (error) {
   console.error("Error initializing Firebase Admin SDK:", error.message);
   console.error(
-    "Ensure FIREBASE_SERVICE_ACCOUNT_PATH is correct and the file exists:",
-    FIREBASE_SERVICE_ACCOUNT_PATH
+    "Ensure FIREBASE_SERVICE_ACCOUNT_PATH is correct and the file exists"
   );
   process.exit(1);
 }
