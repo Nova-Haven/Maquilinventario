@@ -7,6 +7,7 @@ const { createAppAuth } = require("@octokit/auth-app");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const rateLimit = require("express-rate-limit"); // Added for rate limiting
 
 // Import NUM_CHUNKS from config.js
 const { NUM_CHUNKS } = require("./config.js");
@@ -106,6 +107,15 @@ try {
 // --- Express App Setup ---
 const app = express();
 
+// Rate Limiter for the API endpoint
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: "Too many requests from this IP, please try again after 15 minutes",
+});
+
 // Multer setup for file uploads (in-memory storage)
 let upload; // Define in a higher scope
 try {
@@ -187,6 +197,7 @@ async function firebaseAuthMiddleware(req, res, next) {
 try {
   app.post(
     "/api/update-excel-files",
+    apiLimiter, // Apply rate limiting first
     firebaseAuthMiddleware, // Apply authentication middleware
     upload.fields([
       // Expecting two files
