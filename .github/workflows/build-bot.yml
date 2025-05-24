@@ -50,7 +50,7 @@ jobs:
 
       - name: Reconstruct Excel Files
         id: reconstruct_files
-        run: node ./scripts/combineChunks.js
+        run: node ./scripts/combineChunks-build.min.js
         env:
           NUM_CHUNKS: ${{ env.NUM_CHUNKS }}
           INVENTORY_FILE_PREFIX: "INVENTORY_FILE"

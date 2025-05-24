@@ -1,7 +1,7 @@
 const XLSX = window.XLSX;
 
 function extractPeriod(sheet) {
-  const periodCell = sheet["F4"] || {};
+  const periodCell = sheet["A4"] || {};
   const periodText = periodCell.v || "";
   const matches = periodText.match(/Del: (.*?) Al: (.*?)$/);
   return {

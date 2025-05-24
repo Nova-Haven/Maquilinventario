@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
       try {
         const idTokenResult = await user.getIdTokenResult(true);
         const claims = idTokenResult.claims;
-        //console.log("Claims:", claims); // Optional: for debugging
+        console.log("Claims:", claims); // Optional: for debugging
         if (claims && (claims.roles === "admin" || claims.roles === "upload")) {
           userRole = claims.roles;
           console.log("User role:", userRole); // Optional: for debugging

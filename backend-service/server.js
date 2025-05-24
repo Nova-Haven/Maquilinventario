@@ -205,48 +205,42 @@ async function firebaseAuthMiddleware(req, res, next) {
 
 // --- API Endpoint ---
 try {
+  app.get("/", (req, res) => {
+    console.log(`${new Date().toISOString()} - Received GET request on /`);
+    res.status(200).json({
+      message: "Welcome to the Excelite API. Please upload files.",
+    });
+  });
   app.post(
-    "/api/update-excel-files",
+    "/",
     apiLimiter, // Apply rate limiting first
     firebaseAuthMiddleware, // Apply authentication middleware
     upload.fields([
-      // Expecting two files
+      // Expecting two files, but will handle if only one is present
       { name: "inventoryFile", maxCount: 1 },
       { name: "catalogFile", maxCount: 1 },
     ]),
     async (req, res) => {
-      if (!req.files || !req.files.inventoryFile || !req.files.catalogFile) {
+      console.log(
+        `${new Date().toISOString()} - Received POST file upload request on /`
+      );
+      const files = req.files;
+      const inventoryFile = files?.inventoryFile?.[0];
+      const catalogFile = files?.catalogFile?.[0];
+
+      if (!inventoryFile && !catalogFile) {
         return res.status(400).json({
           message:
-            "Bad Request: Both inventory and catalog files are required.",
+            "Bad Request: At least one file (inventoryFile or catalogFile) is required.",
         });
-      }
-
-      const inventoryFile = req.files.inventoryFile[0];
-      const catalogFile = req.files.catalogFile[0];
-      // Filename validation based on originalname is fine
-      const expectedInventoryFilename = inventoryFile.originalname;
-      const expectedCatalogFilename = catalogFile.originalname;
-
-      console.log(`Received inventory file: ${inventoryFile.originalname}`);
-      console.log(`Received catalog file: ${catalogFile.originalname}`);
-
-      if (!expectedInventoryFilename.endsWith(".xlsx")) {
-        return res
-          .status(400)
-          .json({ message: "Invalid inventory file type. Expected .xlsx" });
-      }
-      if (!expectedCatalogFilename.endsWith(".xls")) {
-        return res
-          .status(400)
-          .json({ message: "Invalid catalog file type. Expected .xls" });
       }
 
       let tempInventoryFilePath = "";
       let tempCatalogFilePath = "";
+      let processedInventory = false;
+      let processedCatalog = false;
 
       try {
-        // Dynamically import the main function from splitExcel-bot.js
         const { main: splitExcelBotMain } = await import(
           "./splitExcel-bot.min.js"
         );
@@ -259,80 +253,118 @@ try {
           repo: GITHUB_REPO,
         };
 
-        // Create temp directory for server uploads if it doesn't exist
         if (!fs.existsSync(SERVER_TEMP_DIR)) {
           fs.mkdirSync(SERVER_TEMP_DIR, { recursive: true });
         }
 
-        // Process Inventory File
-        console.log(`Processing inventory file: ${inventoryFile.originalname}`);
-        const sanitizedInventoryFilename = sanitizeFilename(
-          inventoryFile.originalname
-        );
-        tempInventoryFilePath = path.join(
-          SERVER_TEMP_DIR,
-          sanitizedInventoryFilename
-        );
-        fs.writeFileSync(tempInventoryFilePath, inventoryFile.buffer);
-        console.log(
-          `Inventory file temporarily saved to ${tempInventoryFilePath}`
-        );
-        await splitExcelBotMain(
-          tempInventoryFilePath,
-          "INVENTORY_FILE",
-          githubConfig
-        );
-        console.log(`Inventory file processed by splitExcel-bot.`);
-
-        // Process Catalog File
-        console.log(`Processing catalog file: ${catalogFile.originalname}`);
-        const sanitizedCatalogFilename = sanitizeFilename(
-          catalogFile.originalname
-        );
-        if (!sanitizedCatalogFilename) {
-          throw new Error("Invalid catalog file name after sanitization.");
+        if (inventoryFile) {
+          console.log(`Received inventory file: ${inventoryFile.originalname}`);
+          if (!inventoryFile.originalname.endsWith(".xlsx")) {
+            return res
+              .status(400)
+              .json({ message: "Invalid inventory file type. Expected .xlsx" });
+          }
+          const sanitizedInventoryFilename = sanitizeFilename(
+            inventoryFile.originalname
+          );
+          tempInventoryFilePath = path.join(
+            SERVER_TEMP_DIR,
+            sanitizedInventoryFilename
+          );
+          fs.writeFileSync(tempInventoryFilePath, inventoryFile.buffer);
+          console.log(
+            `Inventory file temporarily saved to ${tempInventoryFilePath}`
+          );
+          await splitExcelBotMain(
+            tempInventoryFilePath,
+            "INVENTORY_FILE",
+            githubConfig
+          );
+          console.log(`Inventory file processed by splitExcel-bot.`);
+          processedInventory = true;
         }
-        tempCatalogFilePath = path.join(
-          SERVER_TEMP_DIR,
-          sanitizedCatalogFilename
-        );
-        fs.writeFileSync(tempCatalogFilePath, catalogFile.buffer);
-        console.log(`Catalog file temporarily saved to ${tempCatalogFilePath}`);
-        await splitExcelBotMain(
-          tempCatalogFilePath,
-          "CATALOG_FILE",
-          githubConfig
-        );
-        console.log(`Catalog file processed by splitExcel-bot.`);
 
-        console.log("GitHub secrets updated successfully via splitExcel-bot.");
+        if (catalogFile) {
+          console.log(`Received catalog file: ${catalogFile.originalname}`);
+          if (!catalogFile.originalname.endsWith(".xls")) {
+            return res
+              .status(400)
+              .json({ message: "Invalid catalog file type. Expected .xls" });
+          }
+          const sanitizedCatalogFilename = sanitizeFilename(
+            catalogFile.originalname
+          );
+          tempCatalogFilePath = path.join(
+            SERVER_TEMP_DIR,
+            sanitizedCatalogFilename
+          );
+          fs.writeFileSync(tempCatalogFilePath, catalogFile.buffer);
+          console.log(
+            `Catalog file temporarily saved to ${tempCatalogFilePath}`
+          );
+          await splitExcelBotMain(
+            tempCatalogFilePath,
+            "CATALOG_FILE",
+            githubConfig
+          );
+          console.log(`Catalog file processed by splitExcel-bot.`);
+          processedCatalog = true;
+        }
 
-        // Verify and reconstruct files locally by comparing with original uploaded buffers
-        console.log("Verifying uploaded files against reconstructed chunks...");
-        await verifyUploadedFilesAgainstReconstructed(
-          inventoryFile.originalname,
-          catalogFile.originalname,
-          NUM_CHUNKS,
-          inventoryFile.buffer,
-          catalogFile.buffer
-        );
         console.log(
-          "Local file verification successful: Uploaded content matches reconstructed chunks."
+          "GitHub secrets updated for processed files via splitExcel-bot."
         );
+
+        // Verify files only if both were uploaded and processed
+        if (
+          processedInventory &&
+          processedCatalog &&
+          inventoryFile &&
+          catalogFile
+        ) {
+          console.log(
+            "Verifying uploaded files against reconstructed chunks..."
+          );
+          await verifyUploadedFilesAgainstReconstructed(
+            inventoryFile.originalname,
+            catalogFile.originalname,
+            NUM_CHUNKS,
+            inventoryFile.buffer,
+            catalogFile.buffer
+          );
+          console.log(
+            "Local file verification successful: Uploaded content matches reconstructed chunks."
+          );
+        } else if (processedInventory || processedCatalog) {
+          console.log(
+            "Skipping full file verification as only one file type was processed or uploaded."
+          );
+        }
 
         // Trigger GitHub Actions workflow
         console.log("Triggering GitHub Actions workflow...");
         await triggerWorkflow(
           GITHUB_OWNER,
           GITHUB_REPO,
-          "build-bot.yml", // Ensure this is the correct workflow file name
+          "build-bot.yml",
           "v2.x.x", // Or the branch you want to trigger on
           octokit
         );
 
+        let successMessage = "";
+        if (processedInventory && processedCatalog) {
+          successMessage =
+            "Both inventory and catalog files processed, secrets updated, and site update triggered.";
+        } else if (processedInventory) {
+          successMessage =
+            "Inventory file processed, secrets updated, and site update triggered.";
+        } else if (processedCatalog) {
+          successMessage =
+            "Catalog file processed, secrets updated, and site update triggered.";
+        }
+
         res.status(200).json({
-          message:
-            "Files processed, secrets updated, and site update triggered.",
+          message: successMessage,
         });
       } catch (error) {
         console.error("Error processing files or updating secrets:", error);
