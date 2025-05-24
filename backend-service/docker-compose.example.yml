@@ -10,11 +10,20 @@ services:
       # IMPORTANT: Replace './firebase-service-account-key.json'
       # with the actual path to your service account key file.
       - ./firebase-service-account-key.json:/usr/src/app/firebase-service-account-key.json:ro
+      # Mount your GitHub App private key file into the container
+      # IMPORTANT: Create a file (e.g., github-app-private-key.pem) in this directory (./backend-service)
+      # containing your GitHub App's private key, and ensure the host path below (./github-app-private-key.pem) matches.
+      - ./github-app-private-key.pem:/etc/secrets/github-app-private-key.pem:ro
     environment:
       - NODE_ENV=production
       # IMPORTANT: Set these environment variables
       - PORT=1111
-      - GITHUB_PAT=github_pat_skibidi_toilet # GitHub Fine-grained Token, use the same one in the parent directory's .env file
+      - GITHUB_APP_ID=1234567890 # GitHub App ID
+      - GITHUB_APP_INSTALLATION_ID=123456789 # GitHub App Installation ID
+      # Comment out or remove the direct key if you only want to use the file path method.
+      # - GITHUB_APP_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQ...\\n-----END PRIVATE KEY-----\\n # GitHub App Private Key (Legacy)
+      # Path to the GitHub App private key file mounted into the container (see 'volumes' section)
+      - GITHUB_APP_PRIVATE_KEY_PATH=/etc/secrets/github-app-private-key.pem
       - GITHUB_OWNER=Nova-Haven # GitHub username or organization
       - GITHUB_REPO=Maquilinventario # GitHub repository name
       - FIREBASE_SERVICE_ACCOUNT_PATH=/usr/src/app/firebase-service-account-key.json

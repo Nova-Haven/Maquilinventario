@@ -12,7 +12,8 @@
     "cors": "^2.8.5",
     "multer": "^2.0.0",
     "firebase-admin": "^13.4.0",
-    "@octokit/rest": "^21.1.1"
+    "@octokit/rest": "^21.1.1",
+    "@octokit/auth-app": "^8.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

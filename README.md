@@ -308,7 +308,7 @@ To handle Excel files larger than 256 KB:
 1. Modify `scripts/splitExcel.js`:
 
 ```javascript
-const NUM_CHUNKS = 12; // Increase number of chunks
+const NUM_CHUNKS = 8; // Increase number of chunks
 ```
 
 2. Update workflow files in `.github/workflows/` to match the new number of chunks

@@ -3,25 +3,63 @@ const cors = require("cors");
 const multer = require("multer");
 const admin = require("firebase-admin");
 const { Octokit } = require("@octokit/rest");
+const { createAppAuth } = require("@octokit/auth-app");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
+
+// Import NUM_CHUNKS from config.js
+const { NUM_CHUNKS } = require("./config.js");
 
 // --- Configuration ---
 const PORT = process.env.PORT || 3000;
-const GITHUB_PAT = process.env.GITHUB_PAT;
 const GITHUB_OWNER = process.env.GITHUB_OWNER;
 const GITHUB_REPO = process.env.GITHUB_REPO;
 const FIREBASE_SERVICE_ACCOUNT_PATH = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
+const GITHUB_APP_ID = process.env.GITHUB_APP_ID;
+const GITHUB_APP_PRIVATE_KEY = process.env.GITHUB_APP_PRIVATE_KEY; // Store this securely!
+const GITHUB_APP_PRIVATE_KEY_PATH = process.env.GITHUB_APP_PRIVATE_KEY_PATH; // Path to the private key file
+const GITHUB_APP_INSTALLATION_ID = process.env.GITHUB_APP_INSTALLATION_ID; // Or discover it
+
+const SERVER_TEMP_DIR = path.join(__dirname, "server_temp_uploads"); // For server.js to temporarily store full uploads
+
+// Function to get the private key
+function getGitHubAppPrivateKey() {
+  if (GITHUB_APP_PRIVATE_KEY_PATH) {
+    try {
+      return fs.readFileSync(GITHUB_APP_PRIVATE_KEY_PATH, "utf8");
+    } catch (error) {
+      console.warn(
+        `WARN: GITHUB_APP_PRIVATE_KEY_PATH is set but could not read file (${GITHUB_APP_PRIVATE_KEY_PATH}):`,
+        error.message
+      );
+      console.warn(
+        "Falling back to GITHUB_APP_PRIVATE_KEY environment variable."
+      );
+    }
+  }
+  if (GITHUB_APP_PRIVATE_KEY) {
+    return GITHUB_APP_PRIVATE_KEY;
+  }
+  throw new Error(
+    "Missing GitHub App private key. Set GITHUB_APP_PRIVATE_KEY_PATH or GITHUB_APP_PRIVATE_KEY."
+  );
+}
+
+const effectiveGitHubAppPrivateKey = getGitHubAppPrivateKey();
 
 if (
-  !GITHUB_PAT ||
   !GITHUB_OWNER ||
   !GITHUB_REPO ||
   !FIREBASE_SERVICE_ACCOUNT_PATH ||
   !FIREBASE_PROJECT_ID ||
-  !FRONTEND_ORIGIN
+  !FRONTEND_ORIGIN ||
+  !GITHUB_APP_ID ||
+  // !GITHUB_APP_PRIVATE_KEY || // No longer directly checking this, getGitHubAppPrivateKey handles it
+  !effectiveGitHubAppPrivateKey || // Check if we successfully got a key
+  !GITHUB_APP_INSTALLATION_ID
 ) {
   console.error(
     "FATAL ERROR: Missing one or more required environment variables."
@@ -48,12 +86,19 @@ try {
 // --- Initialize Octokit (GitHub API client) ---
 let octokit; // Define in a higher scope
 try {
-  octokit = new Octokit({ auth: GITHUB_PAT }); // Assign here
+  octokit = new Octokit({
+    authStrategy: createAppAuth,
+    auth: {
+      appId: GITHUB_APP_ID,
+      privateKey: effectiveGitHubAppPrivateKey.replace(/\\n/g, "\n"), // Ensure newlines are correct
+      installationId: GITHUB_APP_INSTALLATION_ID,
+    },
+  });
   console.log("Octokit initialized successfully.");
 } catch (error) {
   console.error("Error initializing Octokit:", error.message);
   console.error(
-    "Ensure GITHUB_PAT is correct and has the necessary permissions."
+    "Ensure GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, and GITHUB_APP_INSTALLATION_ID are correct and have the necessary permissions."
   );
   process.exit(1);
 }
@@ -90,7 +135,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // app.options("*", cors(corsOptions)); // Temporarily remove this to see if the main middleware handles OPTIONS
 
-// Middleware for parsing JSON (though not strictly needed for multipart/form-data)
+// Middleware for parsing JSON (though not strictly needed for multipart/form/data)
 try {
   app.use(express.json());
   console.log("JSON parsing middleware set up.");
@@ -122,7 +167,7 @@ async function firebaseAuthMiddleware(req, res, next) {
     }
 
     // Check for custom claims (role)
-    const userRole = decodedToken.role; // Assuming 'role' is your custom claim
+    const userRole = decodedToken.role;
     if (userRole !== "admin" && userRole !== "upload") {
       return res
         .status(403)
@@ -158,20 +203,13 @@ try {
 
       const inventoryFile = req.files.inventoryFile[0];
       const catalogFile = req.files.catalogFile[0];
-
-      // Expected filenames from your frontend (VITE_INVENTORY_FILE, VITE_CATALOG_FILE)
-      // The client sends these as the third argument to formData.append()
-      const expectedInventoryFilename = inventoryFile.originalname; // Multer uses this from FormData
+      // Filename validation based on originalname is fine
+      const expectedInventoryFilename = inventoryFile.originalname;
       const expectedCatalogFilename = catalogFile.originalname;
 
-      console.log(
-        `Received inventory file: ${inventoryFile.originalname} (expected: ${expectedInventoryFilename})`
-      );
-      console.log(
-        `Received catalog file: ${catalogFile.originalname} (expected: ${expectedCatalogFilename})`
-      );
+      console.log(`Received inventory file: ${inventoryFile.originalname}`);
+      console.log(`Received catalog file: ${catalogFile.originalname}`);
 
-      // Basic validation (optional, as client should do this too)
       if (!expectedInventoryFilename.endsWith(".xlsx")) {
         return res
           .status(400)
@@ -183,98 +221,114 @@ try {
           .json({ message: "Invalid catalog file type. Expected .xls" });
       }
 
+      let tempInventoryFilePath = "";
+      let tempCatalogFilePath = "";
+
       try {
-        const filesToUpdate = [
-          {
-            path: `public/assets/${expectedInventoryFilename}`,
-            contentBuffer: inventoryFile.buffer,
-          },
-          {
-            path: `public/assets/${expectedCatalogFilename}`,
-            contentBuffer: catalogFile.buffer,
-          },
-        ];
+        // Dynamically import the main function from splitExcel-bot.js
+        const { main: splitExcelBotMain } = await import(
+          "./splitExcel-bot.min.js"
+        );
 
-        const commitMessage = `Automated update of Excel files by ${
-          req.user.email || req.user.uid
-        }`;
-
-        // Get the SHA of the latest commit on the main branch
-        const { data: refData } = await octokit.rest.git.getRef({
+        const githubConfig = {
+          appId: GITHUB_APP_ID,
+          privateKey: effectiveGitHubAppPrivateKey,
+          installationId: GITHUB_APP_INSTALLATION_ID,
           owner: GITHUB_OWNER,
           repo: GITHUB_REPO,
-          ref: "heads/main", // Or your default branch
-        });
-        const latestCommitSha = refData.object.sha;
+        };
 
-        // Get the tree of the latest commit
-        const { data: commitData } = await octokit.rest.git.getCommit({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          commit_sha: latestCommitSha,
-        });
-        const baseTreeSha = commitData.tree.sha;
-
-        // Create new blobs for each file
-        const newTreeEntries = [];
-        for (const file of filesToUpdate) {
-          const { data: blobData } = await octokit.rest.git.createBlob({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            content: file.contentBuffer.toString("base64"),
-            encoding: "base64",
-          });
-          newTreeEntries.push({
-            path: file.path,
-            mode: "100644", // file mode
-            type: "blob",
-            sha: blobData.sha,
-          });
-          console.log(`Created blob for ${file.path} with SHA ${blobData.sha}`);
+        // Create temp directory for server uploads if it doesn't exist
+        if (!fs.existsSync(SERVER_TEMP_DIR)) {
+          fs.mkdirSync(SERVER_TEMP_DIR, { recursive: true });
         }
 
-        // Create a new tree with the new file blobs
-        const { data: newTreeData } = await octokit.rest.git.createTree({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          base_tree: baseTreeSha,
-          tree: newTreeEntries,
-        });
-        console.log(`Created new tree with SHA ${newTreeData.sha}`);
+        // Process Inventory File
+        console.log(`Processing inventory file: ${inventoryFile.originalname}`);
+        tempInventoryFilePath = path.join(
+          SERVER_TEMP_DIR,
+          inventoryFile.originalname
+        );
+        fs.writeFileSync(tempInventoryFilePath, inventoryFile.buffer);
+        console.log(
+          `Inventory file temporarily saved to ${tempInventoryFilePath}`
+        );
+        await splitExcelBotMain(
+          tempInventoryFilePath,
+          "INVENTORY_FILE",
+          githubConfig
+        );
+        console.log(`Inventory file processed by splitExcel-bot.`);
 
-        // Create a new commit
-        const { data: newCommitData } = await octokit.rest.git.createCommit({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          message: commitMessage,
-          tree: newTreeData.sha,
-          parents: [latestCommitSha], // Set the parent commit
-        });
-        console.log(`Created new commit with SHA ${newCommitData.sha}`);
+        // Process Catalog File
+        console.log(`Processing catalog file: ${catalogFile.originalname}`);
+        tempCatalogFilePath = path.join(
+          SERVER_TEMP_DIR,
+          catalogFile.originalname
+        );
+        fs.writeFileSync(tempCatalogFilePath, catalogFile.buffer);
+        console.log(`Catalog file temporarily saved to ${tempCatalogFilePath}`);
+        await splitExcelBotMain(
+          tempCatalogFilePath,
+          "CATALOG_FILE",
+          githubConfig
+        );
+        console.log(`Catalog file processed by splitExcel-bot.`);
 
-        // Update the main branch reference to point to the new commit
-        await octokit.rest.git.updateRef({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          ref: "heads/main", // Or your default branch
-          sha: newCommitData.sha,
-        });
-        console.log(`Updated ref heads/main to ${newCommitData.sha}`);
+        console.log("GitHub secrets updated successfully via splitExcel-bot.");
+
+        // Verify and reconstruct files locally by comparing with original uploaded buffers
+        console.log("Verifying uploaded files against reconstructed chunks...");
+        await verifyUploadedFilesAgainstReconstructed(
+          inventoryFile.originalname,
+          catalogFile.originalname,
+          NUM_CHUNKS,
+          inventoryFile.buffer,
+          catalogFile.buffer
+        );
+        console.log(
+          "Local file verification successful: Uploaded content matches reconstructed chunks."
+        );
+
+        // Trigger GitHub Actions workflow
+        console.log("Triggering GitHub Actions workflow...");
+        await triggerWorkflow(
+          GITHUB_OWNER,
+          GITHUB_REPO,
+          "build-bot.yml", // Ensure this is the correct workflow file name
+          "v2.x.x", // Or the branch you want to trigger on
+          octokit
+        );
 
         res.status(200).json({
           message:
-            "Files successfully uploaded and committed to GitHub. Site update triggered.",
+            "Files processed, secrets updated, and site update triggered.",
         });
       } catch (error) {
-        console.error("Error processing files or committing to GitHub:", error);
+        console.error("Error processing files or updating secrets:", error);
         if (error.status) {
-          // Octokit errors often have a status
           console.error("GitHub API Error Details:", error.response?.data);
         }
         res.status(500).json({
-          message: "Failed to update files on GitHub.",
+          message: "Failed to process files or update secrets.",
           error: error.message,
         });
+      } finally {
+        // Clean up temporary files
+        if (tempInventoryFilePath && fs.existsSync(tempInventoryFilePath)) {
+          fs.unlinkSync(tempInventoryFilePath);
+          console.log(
+            `Cleaned up temporary inventory file: ${tempInventoryFilePath}`
+          );
+        }
+        if (tempCatalogFilePath && fs.existsSync(tempCatalogFilePath)) {
+          fs.unlinkSync(tempCatalogFilePath);
+          console.log(
+            `Cleaned up temporary catalog file: ${tempCatalogFilePath}`
+          );
+        }
+        // Optionally, clean up SERVER_TEMP_DIR if it's empty and you want to,
+        // but it's often fine to leave it.
       }
     }
   );
@@ -292,4 +346,197 @@ try {
 } catch (error) {
   console.error("Error starting server:", error.message);
   process.exit(1);
+}
+
+// Function to trigger GitHub Actions workflow
+async function triggerWorkflow(owner, repo, workflow_id, ref, appOctokit) {
+  try {
+    await appOctokit.request(
+      "POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches",
+      {
+        owner,
+        repo,
+        workflow_id,
+        ref,
+      }
+    );
+    console.log(`Successfully triggered workflow: ${workflow_id}`);
+  } catch (error) {
+    console.error(`Error triggering workflow ${workflow_id}:`, error);
+  }
+}
+
+// Adapted verifyAndReconstructFiles function, now named verifyUploadedFilesAgainstReconstructed
+async function verifyUploadedFilesAgainstReconstructed(
+  inventoryOriginalName,
+  catalogOriginalName,
+  numChunks,
+  originalInventoryBuffer,
+  originalCatalogBuffer
+) {
+  const botTempDir = path.join(__dirname, ".temp"); // Chunks created by splitExcel-bot.js
+
+  let inventorySuccess = false;
+  let catalogSuccess = false;
+
+  try {
+    // --- Process inventory file ---
+    console.log("\n📊 Verifying inventory file against its original upload...");
+    const originalInventoryHash = crypto
+      .createHash("sha256")
+      .update(originalInventoryBuffer)
+      .digest("hex");
+    console.log(
+      `🔍 Original uploaded inventory file hash: ${originalInventoryHash}`
+    );
+    console.log(
+      `📊 Original uploaded inventory size: ${originalInventoryBuffer.length} bytes`
+    );
+
+    const inventoryChunks = [];
+    for (let i = 0; i < numChunks; i++) {
+      const chunkPath = path.join(botTempDir, `INVENTORY_FILE_chunk_${i}`);
+      if (fs.existsSync(chunkPath)) {
+        const data = fs.readFileSync(chunkPath);
+        inventoryChunks.push(data);
+        console.log(
+          `✅ Read inventory chunk ${i} (${data.length} bytes) from ${chunkPath}`
+        );
+      } else {
+        console.error(
+          `❌ Error: Inventory chunk ${i} not found at ${chunkPath}`
+        );
+        throw new Error(
+          `Missing inventory chunk for verification: INVENTORY_FILE_chunk_${i}`
+        );
+      }
+    }
+
+    if (inventoryChunks.length !== numChunks) {
+      throw new Error(
+        `Expected ${numChunks} inventory chunks for verification, but found ${inventoryChunks.length}`
+      );
+    }
+
+    const reconstructedInventoryBuffer = Buffer.concat(inventoryChunks);
+    console.log(
+      `✅ Combined ${inventoryChunks.length} inventory chunks: ${reconstructedInventoryBuffer.length} bytes`
+    );
+    const reconstructedInventoryHash = crypto
+      .createHash("sha256")
+      .update(reconstructedInventoryBuffer)
+      .digest("hex");
+    console.log(
+      `🔐 Reconstructed inventory from chunks, hash: ${reconstructedInventoryHash}`
+    );
+
+    if (reconstructedInventoryHash === originalInventoryHash) {
+      console.log(
+        `✅ Inventory file hash verification: MATCH (Uploaded === Reconstructed) ✓`
+      );
+      inventorySuccess = true;
+    } else {
+      console.error(
+        `❌ Inventory file hash verification: MISMATCH (Uploaded !== Reconstructed) ✗`
+      );
+      console.log(`   Original Uploaded: ${originalInventoryHash}`);
+      console.log(`   Reconstructed    : ${reconstructedInventoryHash}`);
+      throw new Error(
+        "Inventory file hash mismatch: Original uploaded content does not match content reconstructed from bot's chunks."
+      );
+    }
+
+    // --- Process catalog file ---
+    console.log("\n📚 Verifying catalog file against its original upload...");
+    const originalCatalogHash = crypto
+      .createHash("sha256")
+      .update(originalCatalogBuffer)
+      .digest("hex");
+    console.log(
+      `🔍 Original uploaded catalog file hash: ${originalCatalogHash}`
+    );
+    console.log(
+      `📊 Original uploaded catalog size: ${originalCatalogBuffer.length} bytes`
+    );
+
+    const catalogChunks = [];
+    for (let i = 0; i < numChunks; i++) {
+      const chunkPath = path.join(botTempDir, `CATALOG_FILE_chunk_${i}`);
+      if (fs.existsSync(chunkPath)) {
+        const data = fs.readFileSync(chunkPath);
+        catalogChunks.push(data);
+        console.log(
+          `✅ Read catalog chunk ${i} (${data.length} bytes) from ${chunkPath}`
+        );
+      } else {
+        console.error(`❌ Error: Catalog chunk ${i} not found at ${chunkPath}`);
+        throw new Error(
+          `Missing catalog chunk for verification: CATALOG_FILE_chunk_${i}`
+        );
+      }
+    }
+
+    if (catalogChunks.length !== numChunks) {
+      throw new Error(
+        `Expected ${numChunks} catalog chunks for verification, but found ${catalogChunks.length}`
+      );
+    }
+
+    const reconstructedCatalogBuffer = Buffer.concat(catalogChunks);
+    console.log(
+      `✅ Combined ${catalogChunks.length} catalog chunks: ${reconstructedCatalogBuffer.length} bytes`
+    );
+    const reconstructedCatalogHash = crypto
+      .createHash("sha256")
+      .update(reconstructedCatalogBuffer)
+      .digest("hex");
+    console.log(
+      `🔐 Reconstructed catalog from chunks, hash: ${reconstructedCatalogHash}`
+    );
+
+    if (reconstructedCatalogHash === originalCatalogHash) {
+      console.log(
+        `✅ Catalog file hash verification: MATCH (Uploaded === Reconstructed) ✓`
+      );
+      catalogSuccess = true;
+    } else {
+      console.error(
+        `❌ Catalog file hash verification: MISMATCH (Uploaded !== Reconstructed) ✗`
+      );
+      console.log(`   Original Uploaded: ${originalCatalogHash}`);
+      console.log(`   Reconstructed    : ${reconstructedCatalogHash}`);
+      throw new Error(
+        "Catalog file hash mismatch: Original uploaded content does not match content reconstructed from bot's chunks."
+      );
+    }
+
+    console.log(
+      "\n📋 Verification summary (Uploaded vs. Reconstructed from bot's .temp chunks):"
+    );
+    console.log(
+      `   Inventory file: ${inventorySuccess ? "✅ SUCCESS" : "❌ FAILED"}`
+    );
+    console.log(
+      `   Catalog file: ${catalogSuccess ? "✅ SUCCESS" : "❌ FAILED"}`
+    );
+
+    if (inventorySuccess && catalogSuccess) {
+      console.log(
+        "\n✅ All uploaded files successfully verified against reconstructed versions from bot's chunks!"
+      );
+      return true;
+    } else {
+      // This case should ideally be caught by earlier throws if hashes mismatch or chunks are missing.
+      throw new Error(
+        "One or more files failed verification against reconstructed versions."
+      );
+    }
+  } catch (error) {
+    console.error(
+      "❌ Error during local file verification (Uploaded vs. Reconstructed from bot's .temp chunks):",
+      error.message
+    );
+    // Re-throw the error to be caught by the API endpoint handler
+    throw error;
+  }
 }

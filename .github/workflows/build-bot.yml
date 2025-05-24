@@ -1,4 +1,4 @@
-name: Build Project
+name: Build and Release (Bot Triggered) # Renamed for clarity
 
 permissions:
   contents: write
@@ -12,63 +12,28 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env: # Define NUM_CHUNKS here for consistency if possible, or pass to the script
+      NUM_CHUNKS: 8 # IMPORTANT: This MUST match the NUM_CHUNKS used by splitExcel-bot.js
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
+      # - name: Install jq # No longer needed for token generation
+      #  run: sudo apt-get install -y jq
 
-      - name: Combine inventory Excel chunks
-        id: combine-inventory
-        run: |
-          mkdir -p public/assets
-          # Execute the Node.js script and capture its JSON output
-          OUTPUT=$(node scripts/combineChunks.min.js --type inventory)
-          # Extract values using jq
-          EXCEL_SIZE=$(echo $OUTPUT | jq -r .size)
-          EXCEL_PATH=$(echo $OUTPUT | jq -r .path)
-          # Set output variables
-          echo "✅ Inventory Excel file created: $EXCEL_SIZE bytes"
-          echo "📁 Location: $EXCEL_PATH"
-        env:
-          INVENTORY_FILE_CHUNK_1: ${{ secrets.INVENTORY_FILE_CHUNK_1 }}
-          INVENTORY_FILE_CHUNK_2: ${{ secrets.INVENTORY_FILE_CHUNK_2 }}
-          INVENTORY_FILE_CHUNK_3: ${{ secrets.INVENTORY_FILE_CHUNK_3 }}
-          INVENTORY_FILE_CHUNK_4: ${{ secrets.INVENTORY_FILE_CHUNK_4 }}
-          INVENTORY_FILE_CHUNK_5: ${{ secrets.INVENTORY_FILE_CHUNK_5 }}
-          INVENTORY_FILE_CHUNK_6: ${{ secrets.INVENTORY_FILE_CHUNK_6 }}
-          INVENTORY_FILE_CHUNK_7: ${{ secrets.INVENTORY_FILE_CHUNK_7 }}
-          INVENTORY_FILE_CHUNK_8: ${{ secrets.INVENTORY_FILE_CHUNK_8 }}
-          VITE_INVENTORY_FILE: ${{ secrets.VITE_INVENTORY_FILE }}
-
-      - name: Combine catalog Excel chunks
-        id: combine-catalog
-        run: |
-          # Execute the Node.js script and capture its JSON output
-          OUTPUT=$(node scripts/combineChunks.min.js --type catalog)
-          # Extract values using jq
-          EXCEL_SIZE=$(echo $OUTPUT | jq -r .size)
-          EXCEL_PATH=$(echo $OUTPUT | jq -r .path)
-          # Set output variables
-          echo "✅ Catalog Excel file created: $EXCEL_SIZE bytes"
-          echo "📁 Location: $EXCEL_PATH"
-        env:
-          CATALOG_FILE_CHUNK_1: ${{ secrets.CATALOG_FILE_CHUNK_1 }}
-          CATALOG_FILE_CHUNK_2: ${{ secrets.CATALOG_FILE_CHUNK_2 }}
-          CATALOG_FILE_CHUNK_3: ${{ secrets.CATALOG_FILE_CHUNK_3 }}
-          CATALOG_FILE_CHUNK_4: ${{ secrets.CATALOG_FILE_CHUNK_4 }}
-          CATALOG_FILE_CHUNK_5: ${{ secrets.CATALOG_FILE_CHUNK_5 }}
-          CATALOG_FILE_CHUNK_6: ${{ secrets.CATALOG_FILE_CHUNK_6 }}
-          CATALOG_FILE_CHUNK_7: ${{ secrets.CATALOG_FILE_CHUNK_7 }}
-          CATALOG_FILE_CHUNK_8: ${{ secrets.CATALOG_FILE_CHUNK_8 }}
-          VITE_CATALOG_FILE: ${{ secrets.VITE_CATALOG_FILE }}
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY_CONTENT }}
 
       - name: Calculate version
         id: version
@@ -83,20 +48,52 @@ jobs:
           enable_prerelease_mode: false
           search_commit_body: true
 
+      - name: Reconstruct Excel Files
+        id: reconstruct_files
+        run: node ./scripts/combineChunks.js
+        env:
+          NUM_CHUNKS: ${{ env.NUM_CHUNKS }}
+          INVENTORY_FILE_PREFIX: "INVENTORY_FILE"
+          # Assuming secrets.VITE_INVENTORY_FILE now stores the target *filename*
+          OUTPUT_INVENTORY_FILENAME: "public/assets/${{ secrets.VITE_INVENTORY_FILE }}"
+          INVENTORY_FILE_CHUNK_1: ${{ secrets.INVENTORY_FILE_CHUNK_1 }}
+          INVENTORY_FILE_CHUNK_2: ${{ secrets.INVENTORY_FILE_CHUNK_2 }}
+          INVENTORY_FILE_CHUNK_3: ${{ secrets.INVENTORY_FILE_CHUNK_3 }}
+          INVENTORY_FILE_CHUNK_4: ${{ secrets.INVENTORY_FILE_CHUNK_4 }}
+          INVENTORY_FILE_CHUNK_5: ${{ secrets.INVENTORY_FILE_CHUNK_5 }}
+          INVENTORY_FILE_CHUNK_6: ${{ secrets.INVENTORY_FILE_CHUNK_6 }}
+          INVENTORY_FILE_CHUNK_7: ${{ secrets.INVENTORY_FILE_CHUNK_7 }}
+          INVENTORY_FILE_CHUNK_8: ${{ secrets.INVENTORY_FILE_CHUNK_8 }} # Adjust if NUM_CHUNKS changes
+
+          CATALOG_FILE_PREFIX: "CATALOG_FILE"
+          OUTPUT_CATALOG_FILENAME: "public/assets/${{ secrets.VITE_CATALOG_FILE }}"
+
+          CATALOG_FILE_CHUNK_1: ${{ secrets.CATALOG_FILE_CHUNK_1 }}
+          CATALOG_FILE_CHUNK_2: ${{ secrets.CATALOG_FILE_CHUNK_2 }}
+          CATALOG_FILE_CHUNK_3: ${{ secrets.CATALOG_FILE_CHUNK_3 }}
+          CATALOG_FILE_CHUNK_4: ${{ secrets.CATALOG_FILE_CHUNK_4 }}
+          CATALOG_FILE_CHUNK_5: ${{ secrets.CATALOG_FILE_CHUNK_5 }}
+          CATALOG_FILE_CHUNK_6: ${{ secrets.CATALOG_FILE_CHUNK_6 }}
+          CATALOG_FILE_CHUNK_7: ${{ secrets.CATALOG_FILE_CHUNK_7 }}
+          CATALOG_FILE_CHUNK_8: ${{ secrets.CATALOG_FILE_CHUNK_8 }} # Adjust if NUM_CHUNKS changes
+          # Ensure your combineChunks.js script expects these env vars and creates files in the specified output paths.
+
       - name: Install dependencies
         run: bun install
 
       - name: Build project
         run: bun run build
         env:
+          # These Vite env vars should now correctly point to the filenames.
+          # The build process (e.g., Vite) will find the reconstructed files in public/assets/
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
           VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-          VITE_INVENTORY_FILE: ${{ secrets.VITE_INVENTORY_FILE }}
-          VITE_CATALOG_FILE: ${{ secrets.VITE_CATALOG_FILE }}
+          VITE_INVENTORY_FILE: ${{ secrets.VITE_INVENTORY_FILE }} # Filename, e.g., "InventarioFormex.xlsx"
+          VITE_CATALOG_FILE: ${{ secrets.VITE_CATALOG_FILE }} # Filename, e.g., "CatalogoFormex.xls"
           VITE_RFC: ${{ secrets.VITE_RFC }}
           VITE_IMMEX: ${{ secrets.VITE_IMMEX }}
           VITE_FINANCIAL_ADDR: ${{ secrets.VITE_FINANCIAL_ADDR }}
@@ -105,21 +102,20 @@ jobs:
         run: zip -r dist.zip dist/
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: dist.zip
           tag_name: v${{ steps.version.outputs.version }}
-          name: Release v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }} - Bot Triggered
           draft: false
           prerelease: false
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }} # Use the token from the new action
 
       - name: Upload to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          repoToken: ${{ secrets.GITHUB_TOKEN }} # Standard GITHUB_TOKEN
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TESTING_MAQUILA }}
           channelId: live
           projectId: testing-maquila
