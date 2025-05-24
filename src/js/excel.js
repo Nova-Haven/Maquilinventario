@@ -1,12 +1,18 @@
 import $ from "jquery";
-import "datatables.net-buttons";
-import "datatables.net-buttons-dt";
-import "datatables.net-buttons/js/buttons.html5.min.js";
+import DataTable from "datatables.net-dt"; // Core DataTables
+import "datatables.net-buttons-dt"; // Buttons styling for DataTables
+import "datatables.net-buttons/js/buttons.html5.min.js"; // HTML5 export buttons
+
+// Import JSZip
+import JSZip from "jszip";
+
 import { handleError } from "./utils/utils.min.js";
-import DataTable from "datatables.net-dt";
 import { auth } from "./fb.js";
 
-// Make DataTable available on jQuery
+// Make JSZip globally available for DataTables HTML5 export buttons
+window.JSZip = JSZip;
+
+// Make DataTable available on jQuery (already present, good)
 $.DataTable = DataTable;
 
 async function loadInventory() {
@@ -204,51 +210,68 @@ async function loadUpload() {
 
     const inventoryFile = inventoryFileInput.files[0];
     const catalogFile = catalogFileInput.files[0];
-    let validationError = false;
+    const formData = new FormData();
+    let filesToUploadCount = 0;
+    let validationErrorOccurred = false;
 
-    // --- Inventory File Validation ---
-    if (!inventoryFile) {
-      showFeedback("Por favor, seleccione el archivo de inventario.", true);
-      validationError = true;
-    } else if (inventoryFile.name !== expectedInventoryFile) {
-      showFeedback(
-        `El archivo de inventario debe llamarse "${expectedInventoryFile}". Archivo seleccionado: "${inventoryFile.name}"`,
-        true
-      );
-      validationError = true;
-    } else if (!inventoryFile.name.endsWith(".xlsx")) {
-      showFeedback("El archivo de inventario debe ser de tipo .xlsx.", true);
-      validationError = true;
+    // --- Inventory File Handling ---
+    if (inventoryFile) {
+      if (inventoryFile.name !== expectedInventoryFile) {
+        showFeedback(
+          `El archivo de inventario debe llamarse "${expectedInventoryFile}". Archivo seleccionado: "${inventoryFile.name}"`,
+          true
+        );
+        validationErrorOccurred = true;
+      } else if (!inventoryFile.name.endsWith(".xlsx")) {
+        showFeedback("El archivo de inventario debe ser de tipo .xlsx.", true);
+        validationErrorOccurred = true;
+      } else {
+        formData.append("inventoryFile", inventoryFile, expectedInventoryFile);
+        filesToUploadCount++;
+      }
     }
 
-    // --- Catalog File Validation (only if inventory validation passed) ---
-    if (!validationError) {
-      if (!catalogFile) {
-        showFeedback("Por favor, seleccione el archivo de catálogo.", true);
-        validationError = true;
-      } else if (catalogFile.name !== expectedCatalogFile) {
+    // --- Catalog File Handling ---
+    if (catalogFile) {
+      if (catalogFile.name !== expectedCatalogFile) {
         showFeedback(
           `El archivo de catálogo debe llamarse "${expectedCatalogFile}". Archivo seleccionado: "${catalogFile.name}"`,
           true
         );
-        validationError = true;
+        validationErrorOccurred = true;
       } else if (!catalogFile.name.endsWith(".xls")) {
         showFeedback("El archivo de catálogo debe ser de tipo .xls.", true);
-        validationError = true;
+        validationErrorOccurred = true;
+      } else {
+        formData.append("catalogFile", catalogFile, expectedCatalogFile);
+        filesToUploadCount++;
       }
     }
 
-    if (validationError) {
+    // --- Final Validation Check ---
+    // If a validation error occurred for any file that was present
+    if (validationErrorOccurred) {
       uploadLoadingMessage.style.display = "none";
       submitButton.disabled = false;
       submitButton.style.opacity = "1";
       return;
     }
 
-    // If validations pass, attempt to upload to Docker server
+    // If no valid files were selected to upload
+    if (filesToUploadCount === 0) {
+      showFeedback(
+        "Por favor, seleccione al menos un archivo válido (inventario o catálogo) para subir.",
+        true
+      );
+      uploadLoadingMessage.style.display = "none";
+      submitButton.disabled = false;
+      submitButton.style.opacity = "1";
+      return;
+    }
+
+    // If validations pass for at least one file, attempt to upload to Docker server
     uploadLoadingMessage.innerHTML =
-      '<img src="/assets/loading.gif" alt="Procesando..." width="24" style="vertical-align: middle; margin-right: 8px;" /> Procesando y subiendo archivos...';
-    uploadLoadingMessage.style.display = "block"; // Ensure it's visible
+      '<img src="/assets/loading.gif" alt="Procesando..." width="24" style="vertical-align: middle; margin-right: 8px;" /> Procesando y subiendo archivo(s)...';
 
     try {
       const currentUser = auth.currentUser;
@@ -266,12 +289,8 @@ async function loadUpload() {
 
       const idToken = await currentUser.getIdToken(true); // Force refresh token
 
-      const formData = new FormData();
-      formData.append("inventoryFile", inventoryFile, expectedInventoryFile);
-      formData.append("catalogFile", catalogFile, expectedCatalogFile);
-      const dockerServer = import.meta.env.VITE_DOCKER_SERVER_ENDPOINT; // Corrected variable name
-
-      const dockerServerEndpoint = `${dockerServer}/api/update-excel-files`; // Removed trailing quote
+      const dockerServer = import.meta.env.VITE_DOCKER_SERVER_ENDPOINT;
+      const dockerServerEndpoint = `${dockerServer}/api/update-excel-files`;
 
       showFeedback(
         "Enviando archivos al servidor para actualización automática. Esto puede tardar unos momentos...",

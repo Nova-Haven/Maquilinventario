@@ -74,3 +74,4 @@ node_modules/
 *.xls*
 .temp
 stats.html
+backend-service.tar.gz
