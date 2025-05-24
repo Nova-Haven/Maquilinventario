@@ -236,7 +236,7 @@ try {
       if (!inventoryFile && !catalogFile) {
         return res.status(400).json({
           message:
-            "Bad Request: At least one file (inventoryFile or catalogFile) is required.",
+            "Solicitud incorrecta: Se requiere al menos un archivo (inventoryFile o catalogFile).",
         });
       }
 
@@ -265,9 +265,10 @@ try {
         if (inventoryFile) {
           console.log(`Received inventory file: ${inventoryFile.originalname}`);
           if (!inventoryFile.originalname.endsWith(".xlsx")) {
-            return res
-              .status(400)
-              .json({ message: "Invalid inventory file type. Expected .xlsx" });
+            return res.status(400).json({
+              message:
+                "Tipo de archivo de inventario no válido. Se esperaba .xlsx",
+            });
           }
           const sanitizedInventoryFilename = sanitizeFilename(
             inventoryFile.originalname
@@ -292,9 +293,10 @@ try {
         if (catalogFile) {
           console.log(`Received catalog file: ${catalogFile.originalname}`);
           if (!catalogFile.originalname.endsWith(".xls")) {
-            return res
-              .status(400)
-              .json({ message: "Invalid catalog file type. Expected .xls" });
+            return res.status(400).json({
+              message:
+                "Tipo de archivo de catálogo no válido. Se esperaba .xls",
+            });
           }
           const sanitizedCatalogFilename = sanitizeFilename(
             catalogFile.originalname
@@ -359,17 +361,17 @@ try {
         let successMessage = "";
         if (processedInventory && processedCatalog) {
           successMessage =
-            "Both inventory and catalog files processed, secrets updated, and site update triggered.";
+            "Se procesaron los archivos de inventario y catálogo, se actualizaron los secretos y se activó la actualización del sitio.";
         } else if (processedInventory) {
           successMessage =
-            "Inventory file processed, secrets updated, and site update triggered.";
+            "Se procesó el archivo de inventario, se actualizaron los secretos y se activó la actualización del sitio.";
         } else if (processedCatalog) {
           successMessage =
-            "Catalog file processed, secrets updated, and site update triggered.";
+            "Se procesó el archivo de catálogo, se actualizaron los secretos y se activó la actualización del sitio.";
         }
 
         res.status(200).json({
-          message: successMessage,
+          message: successMessage + ", espere un minuto, y actualice el sitio.",
         });
       } catch (error) {
         console.error("Error processing files or updating secrets:", error);
