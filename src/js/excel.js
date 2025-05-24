@@ -289,9 +289,8 @@ async function loadUpload() {
 
       const idToken = await currentUser.getIdToken(true); // Force refresh token
 
-      const dockerServer = import.meta.env.VITE_DOCKER_SERVER_ENDPOINT; // Corrected variable name
-
-      const dockerServerEndpoint = `${dockerServer}/api/update-excel-files`; // Removed trailing quote
+      const dockerServer = import.meta.env.VITE_DOCKER_SERVER_ENDPOINT;
+      const dockerServerEndpoint = `${dockerServer}/api/update-excel-files`;
 
       showFeedback(
         "Enviando archivos al servidor para actualización automática. Esto puede tardar unos momentos...",

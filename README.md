@@ -57,8 +57,19 @@ VITE_FINANCIAL_ADDR='company address'
 
 ### 2. Excel File Setup
 
-1. Place your Excel file in the `public/assets` directory (for initial setup or non-admin users). Administrators can upload and manage these files directly within the application.
-2. Ensure it follows the required format:
+This application manages Excel files for inventory and catalog data. There are two primary ways to handle these files:
+
+1.  **Initial Setup / Manual Placement:**
+
+    - Place your Excel files (e.g., `your_excel_inventory_filename.xlsx`, `your_excel_catalog_filename.xls`) directly into the `public/assets` directory. This method is suitable for initial project setup or if the backend service for dynamic uploads is not configured.
+    - Ensure your `.env` file's `VITE_INVENTORY_FILE` and `VITE_CATALOG_FILE` variables correctly point to these filenames.
+
+2.  **Administrator In-App Uploads (Recommended for ongoing management):**
+    - Administrators can upload and manage Excel files directly within the application. This functionality relies on a separate **backend service**.
+    - This backend service receives files from authenticated admins, validates them, and updates them in the `public/assets` directory of the GitHub repository. This, in turn, triggers an automated rebuild and deployment of the frontend application via GitHub Actions.
+    - For detailed setup instructions for this backend service, refer to the `backend-service/README.md` file. The setup of this service is crucial for the admin file upload feature.
+
+Ensure your files follow the required format:
 
 #### Inventory Excel Format
 
@@ -127,7 +138,7 @@ npm run dev
 yarn dev
 ```
 
-**Note on Backend Service:** For file upload functionality by admin/upload users, a separate backend service is required. This service runs in Docker. See the `backend-service/README.md` for setup instructions. Ensure the `VITE_DOCKER_SERVER_ENDPOINT` in your main `.env` file points to where this service is running (e.g., `http://localhost:PORT` where `PORT` is the host port mapped in `backend-service/docker-compose.yml`), unless using a reverse proxy.
+**Note on Backend Service:** For file upload functionality by admin/upload users, a separate backend service is required. This service runs in Docker. See the `backend-service/README.md` for detailed setup instructions. Ensure the `VITE_DOCKER_SERVER_ENDPOINT` in your main `.env` file points to where this service is running (e.g., `http://localhost:PORT` where `PORT` is the host port mapped in `backend-service/docker-compose.yml`), unless using a reverse proxy.
 
 ### 5. Access the application:
 
@@ -180,101 +191,130 @@ maquilinventario/
 └── firebase.json       # Firebase configuration
 ```
 
-### Auto-build in GitHub Actions Setup
+## Automated Deployments with GitHub Actions
 
-> **Note**: This setup handles Excel files up to 256 KB. For larger files, see the [Advanced Configuration](#advanced-configuration) section.
+This project is configured for automated builds and deployments to Firebase Hosting using GitHub Actions. Workflows are triggered whenever changes are pushed to the main branch of the repository. This includes code updates or Excel file updates in the `public/assets` directory (e.g., by the [backend service](backend-service/README.md) or manual commits).
 
-#### Prerequisites
+### 1. Firebase GitHub Integration Setup
 
-- A GitHub repository for your project
-- Firebase project already set up
-- Excel files ready to be used
+This is the core setup for enabling CI/CD with Firebase Hosting.
 
-#### 1. Set up GitHub Repository Secrets
+1.  **Run the Firebase GitHub setup command** in your project root:
+    ```bash
+    firebase init hosting:github
+    ```
+2.  **Follow the prompts:**
 
-Go to your repository's **Settings** > **Secrets and variables** > **Actions** and add the following secrets:
+    - Select your GitHub username/organization.
+    - Authorize Firebase if prompted.
+    - **Important**: Note the service account name displayed (e.g., `FIREBASE_SERVICE_ACCOUNT_YOUR_PROJECT_NAME`). This will be created as a secret in your GitHub repository.
+    - When asked about generating new workflow files:
+      - If you already have `.github/workflows/build.yml` and `.github/workflows/firebase-hosting-pull-request.yml` (or similar) from this project template, you might choose `N` to avoid overwriting them. Ensure they are correctly configured as per the template's requirements. Otherwise, let Firebase generate them and adapt as needed.
 
-```plaintext
-VITE_INVENTORY_FILE=your_excel_inventory_filename.xlsx
-VITE_CATALOG_FILE=your_excel_catalog_filename.xls
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-VITE_RFC=company_rfc
-VITE_IMMEX=company_immex
-VITE_FINANCIAL_ADDR='company address'
-```
+3.  **Configure Repository Secrets for Firebase:**
+    Ensure the following secrets are set in your repository's **Settings > Secrets and variables > Actions**:
 
-#### 2. Create GitHub Personal Access Token (Fine-grained token)
+    - `FIREBASE_SERVICE_ACCOUNT_YOUR_PROJECT_NAME`: (This should have been created by `firebase init hosting:github`). Verify its name matches what the workflow files expect (e.g., `${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROJECT_NAME }}` as used in the template workflows).
+    - The various `VITE_FIREBASE_*` API keys and configuration values, `VITE_RFC`, `VITE_IMMEX`, and `VITE_FINANCIAL_ADDR` should also be set as secrets if they are not intended to be hardcoded or if your workflows need them during build.
 
-1. Visit [Personal Access Tokens/Fine-grained tokens](https://github.com/settings/personal-access-tokens/new)
-2. Set up the token:
-   - Name: `Maquilinventario Deploy`
-   - Expiration: Choose based on your needs
-   - Repository access: Select your repository
-   - Permissions:
-     - Repository permissions:
-       - ✓ Metadata: Read-only
-       - ✓ Secrets: Read and write
-3. Click "Generate token"
-4. Copy the generated token
+4.  **Review and Update Workflow Files (if necessary):**
+    - Navigate to `.github/workflows/`.
+    - Ensure your workflow files (e.g., `build.yml`, `firebase-hosting-pull-request.yml`) correctly reference the Firebase service account secret and other necessary configurations. Example snippet for deployment:
+      ```yaml
+      # Example from a workflow file:
+      # - uses: FirebaseExtended/action-hosting-deploy@v0
+      #   with:
+      #     repoToken: '${{ secrets.GITHUB_TOKEN }}'
+      #     firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROJECT_NAME }}' # Ensure this matches your secret name
+      #     channelId: live
+      #     projectId: your_project_id # Make sure this is your Firebase Project ID
+      ```
 
-#### 3. Configure Local Environment
+### 2. Optional: Managing Excel Files via GitHub Secrets (using `scripts/splitExcel.js`)
 
-1. Create a `.env` file in your project root:
+If your Excel files are very large (e.g., >256KB, which can be problematic for direct commits or single GitHub secrets) or if you prefer to manage their content via GitHub secrets rather than committing them directly to `public/assets`, this project includes a script (`scripts/splitExcel.js`). This script chunks the files and stores their content as multiple GitHub secrets. The GitHub Actions workflow would then need to be adapted to reassemble these files during the build process.
 
-```plaintext
-GITHUB_TOKEN=your_copied_token
-GITHUB_OWNER=your_github_username
-GITHUB_REPO=your_repo_name
-VITE_INVENTORY_FILE=your_excel_inventory_filename.xlsx
-VITE_CATALOG_FILE=your_excel_catalog_filename.xls
-```
+> **Note**: This method is used for security reasons, as Excel files are not committed directly to version history. Instead, they are split into chunks (currently defaulting to **8 chunks**) and stored as GitHub secrets. These chunks are then reassembled during the build process by the GitHub Actions workflow. This approach also helps manage large files (e.g., >256KB) that might be problematic for direct commits or single GitHub secrets. If files in `public/assets` are updated through other means (e.g., manual commit or the [backend service](backend-service/README.md)), the general CI/CD setup (Part 1 above) will trigger a rebuild. Using `splitExcel.js` and managing files as chunked secrets requires specific workflow steps for reconstruction.
 
-#### 4. Set up Firebase GitHub Integration
+#### a. Prerequisites for `splitExcel.js`
 
-1. Run the Firebase GitHub setup:
+- Your Excel files (inventory and catalog) ready locally.
+- The general repository secrets (Firebase keys, app config like `VITE_RFC`, etc.) should already be configured as per Part 1.
 
-```bash
-firebase init hosting:github
-```
+#### b. Create GitHub Personal Access Token (Fine-grained token) for `splitExcel.js`
 
-2. During the setup:
-   - Select your GitHub username/organization
-   - Authorize Firebase if prompted
-   - **Important**: Note the service account name displayed:
-   ```plaintext
-   ✔ Uploaded service account JSON to GitHub as secret FIREBASE_SERVICE_ACCOUNT_PROJECT_NAME
-   ```
-   - When asked about new workflows, respond with:
-     - First prompt: `N`
-     - Second prompt: `n`
+This token is used by the `splitExcel.js` script to write the chunked file content as secrets to your GitHub repository.
 
-#### 5. Update Workflow Files
+1.  Visit [GitHub Personal Access Tokens (Fine-grained tokens)](https://github.com/settings/personal-access-tokens/new).
+2.  Set up the token:
+    - **Token name:** `Maquilinventario Excel Splitter` (or similar).
+    - **Expiration:** Choose based on your security policy.
+    - **Repository access:** Select "Only select repositories" and choose your Maquilinventario repository.
+    - **Permissions:** Under "Repository permissions," grant:
+      - **Secrets:** `Read and write`.
+3.  Click "Generate token" and copy the generated token.
 
-1. Navigate to `.github/workflows/`
-2. Update both `build.yml` and `firebase-hosting-pull-request.yml`:
-   - Replace:
-   ```yaml
-   ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TESTING_MAQUILA }}
-   ```
-   - With your service account name from step 4:
-   ```yaml
-   ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROJECT_NAME }}
-   ```
+#### c. Configure Local Environment for `splitExcel.js`
 
-#### 6. Test the Setup
+1.  Create or update your local `.env` file in the project root with the following:
+    ```plaintext
+    GITHUB_TOKEN=your_copied_pat_for_splitExcel
+    GITHUB_OWNER=your_github_username_or_organization
+    GITHUB_REPO=your_maquilinventario_repo_name
+    VITE_INVENTORY_FILE=path/to/your/local/inventory_filename.xlsx
+    VITE_CATALOG_FILE=path/to/your/local/catalog_filename.xls
+    ```
+    - Ensure `VITE_INVENTORY_FILE` and `VITE_CATALOG_FILE` point to the actual Excel files on your local system that you want to split and upload as secrets.
 
-1. Split the Excel file into chunks:
+#### d. Run the `splitExcel.js` Script
 
-```bash
-bun run split-excel  # or npm/yarn
-```
+1.  From your project root, run the script to split the Excel files and upload their content as secrets:
 
-2. Check your repository's Actions tab to ensure workflows are running correctly
+    ```bash
+    # Using Bun
+    bun run split-excel
+
+    # Using npm
+    # npm run split-excel
+
+    # Using yarn
+    # yarn split-excel
+    ```
+
+    This script will create secrets in your GitHub repository named like `EXCEL_CONTENT_CHUNK_0`, `EXCEL_CONTENT_CHUNK_1`, etc., for each file.
+
+#### e. Adapt GitHub Workflow to Use Chunked Secrets
+
+Your GitHub Actions workflow (e.g., `.github/workflows/build.yml`) will need additional steps _before_ the application build step to:
+
+1.  Read these `EXCEL_CONTENT_CHUNK_X` secrets.
+2.  Combine them back into the original Excel file structures.
+3.  Place these reassembled files into the `public/assets/` directory, using the filenames specified by `VITE_INVENTORY_FILE` and `VITE_CATALOG_FILE` environment variables/secrets.
+    _(The project's `scripts/combineChunks.js` might be used or adapted for this purpose within the workflow. Ensure the workflow provides the necessary environment variables and context for such a script.)_
+
+#### f. Advanced Configuration for `splitExcel.js` (Chunking)
+
+The system is currently configured to split Excel files into **8 chunks**. This number is defined in `scripts/splitExcel.js` and is critical for both the splitting and reassembly processes.
+
+To handle very large Excel files or to adjust the chunking strategy:
+
+1.  Modify `scripts/splitExcel.js`:
+    ```javascript
+    const NUM_CHUNKS = 8; // Change this value if needed
+    ```
+    A higher number of chunks means smaller individual secrets, which can help avoid size limits per secret.
+2.  **Crucially, if you change `NUM_CHUNKS` from the default of 8 (e.g., for heavier files), you must update this value consistently in all relevant places.** This includes:
+    - The `scripts/splitExcel.js` file itself.
+    - Any logic in your GitHub Actions workflow (see step 2.e) responsible for reading and combining these chunks.
+    - Any related scripts or configurations that depend on the number of chunks.
+3.  Test thoroughly after making any changes to the chunking mechanism.
+
+#### g. Troubleshooting `splitExcel.js`
+
+- **Chunk Upload Failures:** If chunks fail to upload, check the total size of your Excel file. You might need to increase `NUM_CHUNKS` in `scripts/splitExcel.js`. Also, verify GitHub's limits on the number and size of secrets.
+- **PAT Permissions:** Ensure the GitHub Personal Access Token (PAT) used in `GITHUB_TOKEN` has `Secrets: Read and write` permissions for the repository.
+- **Environment Variables:** Double-check that `GITHUB_OWNER`, `GITHUB_REPO`, `VITE_INVENTORY_FILE`, and `VITE_CATALOG_FILE` are correctly set in your local `.env` file when running `splitExcel.js`.
+- **Workflow Secret Names:** Verify that the Firebase service account secret name in your workflow files (e.g., `FIREBASE_SERVICE_ACCOUNT_PROJECT_NAME`) exactly matches the name of the secret in your GitHub repository settings.
 
 ## Using the Application
 
@@ -300,22 +340,3 @@ bun run split-excel  # or npm/yarn
 - Both views support PDF export functionality
 - Click the "Exportar PDF" button to generate a downloadable PDF
 - PDFs are formatted with proper headers and company information
-
-#### Advanced Configuration
-
-To handle Excel files larger than 256 KB:
-
-1. Modify `scripts/splitExcel.js`:
-
-```javascript
-const NUM_CHUNKS = 8; // Increase number of chunks
-```
-
-2. Update workflow files in `.github/workflows/` to match the new number of chunks
-3. Test thoroughly before deploying
-
-#### Troubleshooting
-
-- If chunks fail to upload, check the size of your Excel file and adjust chunks accordingly
-- Ensure all secrets are properly set in GitHub repository settings
-- Verify the Firebase service account name matches exactly in workflow files

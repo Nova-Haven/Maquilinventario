@@ -14,7 +14,7 @@ const rateLimit = require("express-rate-limit"); // Added for rate limiting
 const { NUM_CHUNKS } = require("./config.js");
 
 // --- Configuration ---
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 1111;
 const GITHUB_OWNER = process.env.GITHUB_OWNER;
 const GITHUB_REPO = process.env.GITHUB_REPO;
 const FIREBASE_SERVICE_ACCOUNT_PATH = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
@@ -117,6 +117,11 @@ try {
 // --- Express App Setup ---
 const app = express();
 
+// Tell Express that it's behind a trusted proxy (Nginx in this case)
+// This allows req.ip to be the actual client IP from X-Forwarded-For
+// and helps express-rate-limit work correctly.
+app.set("trust proxy", 1);
+
 // Rate Limiter for the API endpoint
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -178,8 +183,8 @@ async function firebaseAuthMiddleware(req, res, next) {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
 
     // Check if the token is for the correct Firebase project
-    console.log("FIREBASE_PROJECT_ID:", FIREBASE_PROJECT_ID);
-    console.log("decodedToken.aud:", decodedToken.aud);
+    // console.log("FIREBASE_PROJECT_ID:", FIREBASE_PROJECT_ID);
+    // console.log("decodedToken.aud:", decodedToken.aud);
     if (decodedToken.aud !== FIREBASE_PROJECT_ID) {
       return res
         .status(401)
@@ -187,7 +192,7 @@ async function firebaseAuthMiddleware(req, res, next) {
     }
 
     // Check for custom claims (role)
-    const userRole = decodedToken.role;
+    const userRole = decodedToken.roles;
     if (userRole !== "admin" && userRole !== "upload") {
       return res
         .status(403)
