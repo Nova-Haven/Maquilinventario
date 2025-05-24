@@ -66,6 +66,16 @@ if (
   console.error(
     "FATAL ERROR: Missing one or more required environment variables."
   );
+  console.error(
+    !GITHUB_OWNER,
+    !GITHUB_REPO,
+    !FIREBASE_SERVICE_ACCOUNT_PATH,
+    !FIREBASE_PROJECT_ID,
+    !FRONTEND_ORIGIN,
+    !GITHUB_APP_ID,
+    !effectiveGitHubAppPrivateKey,
+    !GITHUB_APP_INSTALLATION_ID
+  );
   process.exit(1);
 }
 
@@ -256,7 +266,9 @@ try {
 
         // Process Inventory File
         console.log(`Processing inventory file: ${inventoryFile.originalname}`);
-        const sanitizedInventoryFilename = sanitizeFilename(inventoryFile.originalname);
+        const sanitizedInventoryFilename = sanitizeFilename(
+          inventoryFile.originalname
+        );
         tempInventoryFilePath = path.join(
           SERVER_TEMP_DIR,
           sanitizedInventoryFilename
@@ -274,11 +286,16 @@ try {
 
         // Process Catalog File
         console.log(`Processing catalog file: ${catalogFile.originalname}`);
-        const sanitizedCatalogFilename = sanitizeFilename(catalogFile.originalname);
+        const sanitizedCatalogFilename = sanitizeFilename(
+          catalogFile.originalname
+        );
         if (!sanitizedCatalogFilename) {
           throw new Error("Invalid catalog file name after sanitization.");
         }
-        tempCatalogFilePath = path.join(SERVER_TEMP_DIR, sanitizedCatalogFilename);
+        tempCatalogFilePath = path.join(
+          SERVER_TEMP_DIR,
+          sanitizedCatalogFilename
+        );
         fs.writeFileSync(tempCatalogFilePath, catalogFile.buffer);
         console.log(`Catalog file temporarily saved to ${tempCatalogFilePath}`);
         await splitExcelBotMain(
