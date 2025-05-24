@@ -6,6 +6,7 @@ const { Octokit } = require("@octokit/rest");
 const { createAppAuth } = require("@octokit/auth-app");
 const fs = require("fs");
 const path = require("path");
+const sanitizeFilename = require("sanitize-filename");
 const crypto = require("crypto");
 const rateLimit = require("express-rate-limit"); // Added for rate limiting
 
@@ -255,9 +256,10 @@ try {
 
         // Process Inventory File
         console.log(`Processing inventory file: ${inventoryFile.originalname}`);
+        const sanitizedInventoryFilename = sanitizeFilename(inventoryFile.originalname);
         tempInventoryFilePath = path.join(
           SERVER_TEMP_DIR,
-          inventoryFile.originalname
+          sanitizedInventoryFilename
         );
         fs.writeFileSync(tempInventoryFilePath, inventoryFile.buffer);
         console.log(
