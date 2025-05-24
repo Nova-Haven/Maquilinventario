@@ -274,10 +274,11 @@ try {
 
         // Process Catalog File
         console.log(`Processing catalog file: ${catalogFile.originalname}`);
-        tempCatalogFilePath = path.join(
-          SERVER_TEMP_DIR,
-          catalogFile.originalname
-        );
+        const sanitizedCatalogFilename = sanitizeFilename(catalogFile.originalname);
+        if (!sanitizedCatalogFilename) {
+          throw new Error("Invalid catalog file name after sanitization.");
+        }
+        tempCatalogFilePath = path.join(SERVER_TEMP_DIR, sanitizedCatalogFilename);
         fs.writeFileSync(tempCatalogFilePath, catalogFile.buffer);
         console.log(`Catalog file temporarily saved to ${tempCatalogFilePath}`);
         await splitExcelBotMain(
