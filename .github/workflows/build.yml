@@ -30,7 +30,7 @@ jobs:
         run: |
           mkdir -p public/assets
           # Execute the Node.js script and capture its JSON output
-          OUTPUT=$(node scripts/combineChunks.min.js --type inventory)
+          OUTPUT=$(node scripts/combineChunks-build.min.js --type inventory)
           # Extract values using jq
           EXCEL_SIZE=$(echo $OUTPUT | jq -r .size)
           EXCEL_PATH=$(echo $OUTPUT | jq -r .path)
@@ -52,7 +52,7 @@ jobs:
         id: combine-catalog
         run: |
           # Execute the Node.js script and capture its JSON output
-          OUTPUT=$(node scripts/combineChunks.min.js --type catalog)
+          OUTPUT=$(node scripts/combineChunks-build.min.js --type catalog)
           # Extract values using jq
           EXCEL_SIZE=$(echo $OUTPUT | jq -r .size)
           EXCEL_PATH=$(echo $OUTPUT | jq -r .path)
