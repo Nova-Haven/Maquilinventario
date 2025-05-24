@@ -5,6 +5,7 @@ A web application that displays inventory and product catalog data from exports 
 ## Features
 
 - 🔒 Secure authentication with Firebase
+- 🔑 Role-based access control with in-app Excel file management for administrators
 - 📊 Excel file visualization for inventory and product catalog
 - 🔄 Toggle between inventory and catalog views
 - 💾 PDF export capabilities for both data types
@@ -19,6 +20,7 @@ A web application that displays inventory and product catalog data from exports 
 - Bun (recommended) or npm/yarn
 - Firebase project
 - Excel files in the required format (inventory and catalog)
+- Docker and Docker Compose (for running the backend file upload service)
 
 ## Quick Start
 
@@ -55,7 +57,7 @@ VITE_FINANCIAL_ADDR='company address'
 
 ### 2. Excel File Setup
 
-1. Place your Excel file in the `public/assets` directory
+1. Place your Excel file in the `public/assets` directory (for initial setup or non-admin users). Administrators can upload and manage these files directly within the application.
 2. Ensure it follows the required format:
 
 #### Inventory Excel Format
@@ -125,7 +127,9 @@ npm run dev
 yarn dev
 ```
 
-5. Access the application:
+**Note on Backend Service:** For file upload functionality by admin/upload users, a separate backend service is required. This service runs in Docker. See the `backend-service/README.md` for setup instructions. Ensure the `VITE_DOCKER_SERVER_ENDPOINT` in your main `.env` file points to where this service is running (e.g., `http://localhost:PORT` where `PORT` is the host port mapped in `backend-service/docker-compose.yml`), unless using a reverse proxy.
+
+### 5. Access the application:
 
 - Open http://localhost:5173
 - Log in with your test credentials
@@ -160,6 +164,12 @@ The built files will be in the `dist` directory, ready for deployment to any sta
 ```plaintext
 maquilinventario/
 ├── .github/workflows/    # GitHub Actions workflows
+├── backend-service/      # Dockerized backend for file uploads
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── package.json
+│   ├── server.js
+│   └── README.md         # Instructions for the backend service
 ├── public/              # Static assets
 │   └── assets/          # Excel files
 ├── scripts/            # Utility scripts
@@ -198,7 +208,7 @@ VITE_IMMEX=company_immex
 VITE_FINANCIAL_ADDR='company address'
 ```
 
-#### 2. Create GitHub Personal Access Token
+#### 2. Create GitHub Personal Access Token (Fine-grained token)
 
 1. Visit [Personal Access Tokens/Fine-grained tokens](https://github.com/settings/personal-access-tokens/new)
 2. Set up the token:
@@ -298,7 +308,7 @@ To handle Excel files larger than 256 KB:
 1. Modify `scripts/splitExcel.js`:
 
 ```javascript
-const NUM_CHUNKS = 12; // Increase number of chunks
+const NUM_CHUNKS = 8; // Increase number of chunks
 ```
 
 2. Update workflow files in `.github/workflows/` to match the new number of chunks
@@ -308,4 +318,4 @@ const NUM_CHUNKS = 12; // Increase number of chunks
 
 - If chunks fail to upload, check the size of your Excel file and adjust chunks accordingly
 - Ensure all secrets are properly set in GitHub repository settings
-- Verify the Firebase service account name matches exactly in workflow files`
+- Verify the Firebase service account name matches exactly in workflow files
