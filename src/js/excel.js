@@ -167,7 +167,7 @@ async function loadUpload() {
   if (titleEl) titleEl.textContent = "Administración de Archivos";
 
   function showFeedback(message, isError = false, isInstructions = false) {
-    feedbackDiv.innerHTML = message; // Use innerHTML to allow for HTML in instructions
+    feedbackDiv.textContent = message; // Use textContent to prevent XSS vulnerabilities
     feedbackDiv.className = isError
       ? "feedback-message error"
       : isInstructions
